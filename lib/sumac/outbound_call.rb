@@ -1,9 +1,9 @@
 class Sumac
-  class CallDispatcher
+  class OutboundCall
     include StateMachine
     
-    state :initiated, initial: true
-    state :listening
+    state :building, initial: true
+    state :waiting
     state :closing
     state :closed
     
@@ -20,31 +20,28 @@ class Sumac
       @forget_condition_variable.broadcast
     end
     
-    def initialize(connection)
+    def initialize(connection, remote_object, method_name, arguments)
       raise "argument 'connection' must be a Connection" unless connection.is_a?(Connection)
       @connection = connection
-      @pending_requests = {}
-      @id_allocator = IDAllocator.new
+      raise unless remote_object.is_a?(RemoteObject)
+      @remote_object = remote_object
+      @method_name = method_name
+      @arguments = arguments
+      @request = Message::Exchange::CallRequest.new(@connection)
     end
     
-    def any_calls_pending?
-      @pending_requests.any?
+    def run
+      @connection.mutex.synchronize do
+        raise ClosedError unless @connection.at?(:active)
+        id = @connection.calls.register(self)
+        request.id = id
+        
+      
+    def validate_remote_object
+      @request.exposed_object = @remote_object
     end
     
-    def kill_all
-      raise unless @connection.at?(:kill)
-      @pending_requests.each do |id, waiter|
-        @pending_requests.delete(id)
-        waiter.resume(nil)
-      end
-    end
-    
-    def make_call(exposed_object, method_name, arguments)
-      raise unless exposed_object.is_a?(RemoteObject)
-      raise ClosedError unless @connection.at?(:active)
-      id = @id_allocator.allocate
-      request = Message::Exchange::CallRequest.new(@connection)
-      request.id = id
+    def build
       @connection.local_references.start_transaction
       @connection.remote_references.start_transaction
       begin
@@ -60,6 +57,12 @@ class Sumac
         @connection.local_references.commit_transaction
         @connection.remote_references.commit_transaction
       end
+    
+    def make_call(exposed_object, method_name, arguments)
+      
+      
+      
+      
       @connection.messenger.send(request)
       if @connection.at?([:kill, :close])
         raise ClosedError
@@ -87,6 +90,9 @@ class Sumac
       raise MessageError unless waiter
       waiter.resume(exchange)
       nil
+    end
+    
+    def cancel
     end
     
   end

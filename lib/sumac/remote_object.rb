@@ -9,11 +9,11 @@ class Sumac
     end
     
     def method_missing(method_name, *arguments, &block)  # blocks not working yet
-      @connection.mutex.lock
       raise StaleObjectError unless @remote_reference.callable?
       begin
         arguments << block.to_lambda if block_given?
-        return_value = @connection.call_dispatcher.make_call(self, method_name.to_s, arguments)
+        call = OutboundCall.new(connection, self, method_name.to_s, arguments)
+        return_value = call.run
       rescue ClosedError
         raise StaleObjectError
       end
