@@ -1,44 +1,32 @@
 require 'socket'
 require 'pry'
 require 'json'
+require 'celluloid'
 
 require_relative 'core_extensions.rb'
+require_relative 'sumac/connection.rb'
+require_relative 'sumac/exposed_object.rb'
+require_relative 'sumac/entry.rb'
 require_relative 'sumac/eventable.rb'
-require_relative 'sumac/adapter/adapter.rb'
-require_relative 'sumac/adapter/server.rb'
-require_relative 'sumac/adapter/connection.rb'
-require_relative 'sumac/adapter/socket.rb'
+require_relative 'sumac/exposed_id_manager.rb'
+require_relative 'sumac/exposed_local_object_manager.rb'
+require_relative 'sumac/exposed_object_reference.rb'
+require_relative 'sumac/global_id_manager.rb'
+require_relative 'sumac/inbound_reqest.rb'
+require_relative 'sumac/inbound_request_manager.rb'
+require_relative 'sumac/inbound_response.rb'
+require_relative 'sumac/local_reachable_object.rb'
+require_relative 'sumac/message_helper.rb'
+require_relative 'sumac/message_manager.rb'
+require_relative 'sumac/outbound_reqest.rb'
+require_relative 'sumac/outbound_request_manager.rb'
+require_relative 'sumac/outbound_response.rb'
+require_relative 'sumac/reachable_object.rb'
+require_relative 'sumac/remote_object_wrapper.rb'
+require_relative 'sumac/remote_reachable_object.rb'
+require_relative 'sumac/scope.rb'
+require_relative 'sumac/sequence_number_manager.rb'
+require_relative 'sumac/waiter.rb'
 
-module Sumac
+module Sumac  
 end
-
-=begin
-module Sumac
-  class Connection
-    
-    def initialize
-      @call_number = -1
-    end
-    
-    def new_call_number
-      @call_number += 1
-    end
-    
-    def byte_in
-    end
-    
-    def send_call(hash)
-      raise "Parameter missing from hash." unless hash.keys.include?(:type, :class, :id, :method)
-      raise "Unkown parameter found in hash." if (hash.keys - [:type, :class, :id, :method]).any?
-      semaphore.synchronize do
-        call_number = new_call_number
-        hash['call_number'] = call_number
-        @adapter.write(hash.to_json)
-        @calls_waiting[call_number] = {thread: Thread.current}
-      end
-      Thread.stop
-    end
-    
-  end
-end
-=end
