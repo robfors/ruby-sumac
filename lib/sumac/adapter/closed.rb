@@ -1,6 +1,6 @@
-module Sumac
+class Sumac
   module Adapter
-    class Closed < StandardError
+    class ClosedError < StandardError
     
     end
   end

@@ -1,9 +1,9 @@
-module Sumac
+class Sumac
   class Message
     class Object
       class HashTable < Object
       
-        def initialize(orchestrator)
+        def initialize(connection)
           super
           @entries = nil
         end
@@ -16,8 +16,8 @@ module Sumac
           @entries = json_structure['entries'].map do |entry|
             raise MessageError unless entry.is_a?(::Hash) && entry.include?('key') && entry.include?('value')
             {
-              'key' => Dispatch.from_json_structure(@orchestrator, entry['key']),
-              'value' => Dispatch.from_json_structure(@orchestrator, entry['value'])
+              'key' => Dispatch.from_json_structure(@connection, entry['key']),
+              'value' => Dispatch.from_json_structure(@connection, entry['value'])
             }
           end
           nil
@@ -27,8 +27,8 @@ module Sumac
           raise MessageError unless native_object.is_a?(::Hash)
           @entries = native_object.map do |key, value|
             {
-              'key' => Dispatch.from_native_object(@orchestrator, key),
-              'value' => Dispatch.from_native_object(@orchestrator, value)
+              'key' => Dispatch.from_native_object(@connection, key),
+              'value' => Dispatch.from_native_object(@connection, value)
             }
           end
           nil

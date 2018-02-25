@@ -1,4 +1,4 @@
-module Sumac
+class Sumac
   module Adapter
   
   end

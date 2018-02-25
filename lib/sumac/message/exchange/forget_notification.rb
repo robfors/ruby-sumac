@@ -1,50 +1,74 @@
-module Sumac
+class Sumac
   class Message
     class Exchange
       class ForgetNotification < Notification
         
-        def initialize(orchestrator)
+        def initialize(connection)
           super
-          @exposed_object = nil
+          @orgin = nil
+          @id = nil
         end
         
         def parse_json_structure(json_structure)
           raise MessageError unless json_structure.is_a?(Hash) &&
             json_structure['message_type'] == 'exchange' &&
             json_structure['exchange_type'] == 'forget_notification'
-          @exposed_object = Object::Exposed.from_json_structure(@orchestrator, json_structure['exposed_object'])
-          nil
+          raise MessageError unless json_structure['orgin'] == 'local' || json_structure['orgin'] == 'remote'
+          @orgin = json_structure['orgin']
+          raise MessageError unless json_structure['id'].is_a?(::Integer)
+          @id = json_structure['id']
         end
         
         def to_json_structure
+          raise MessageError unless setup?
           {
             'message_type' => 'exchange',
             'exchange_type' => 'forget_notification',
-            'exposed_object' => @exposed_object.to_json_structure
+            'orgin' => @orgin,
+            'id' => @id
           }
         end
         
-        def exposed_object
+        def reference
           raise MessageError unless setup?
-          @exposed_object.to_native_object
+          case @orgin
+          when 'local'
+            reference = @connection.local_references.from_id(@id)
+            raise MessageError unless reference
+            reference
+          when 'remote'
+            @connection.remote_references.from_id(@id)
+          end
         end
         
-        def exposed_object=(new_exposed_object)
-          raise MessageError unless new_exposed_object.is_a?(ExposedObject) ||
-            new_exposed_object.is_a?(RemoteObject)
-          @exposed_object = Object::Exposed.from_native_object(@orchestrator, new_exposed_object)
+        def reference=(new_reference)
+          case new_reference
+          when LocalReference
+            @orgin = 'local'
+          when RemoteReference
+            @orgin = 'remote'
+          else
+            raise MessageError
+          end
+          @id = new_reference.exposed_id
+          nil
         end
         
         def invert_orgin
           raise MessageError unless setup?
-          @exposed_object.invert_orgin
+          case @orgin
+          when 'local'
+            @orgin = 'remote'
+          when 'remote'
+            @orgin = 'local'
+          end
           nil
         end
         
         private
         
         def setup?
-          @exposed_object != nil
+          @orgin != nil && @id != nil
         end
         
       end

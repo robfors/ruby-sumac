@@ -1,9 +1,9 @@
-module Sumac
+class Sumac
   class Message
     class Exchange
       class InitializationNotification < Notification
       
-        def initialize(orchestrator)
+        def initialize(connection)
           super
           @entry = nil
         end
@@ -12,7 +12,7 @@ module Sumac
           raise MessageError unless json_structure.is_a?(Hash) &&
             json_structure['message_type'] == 'exchange' &&
             json_structure['exchange_type'] == 'initialization_notification'
-          @entry = Object::Dispatch.from_json_structure(@orchestrator, json_structure['entry'])
+          @entry = Object::Dispatch.from_json_structure(@connection, json_structure['entry'])
           nil
         end
         
@@ -31,7 +31,7 @@ module Sumac
         end
         
         def entry=(new_entry_object)
-          @entry = Object::Dispatch.from_native_object(@orchestrator, new_entry_object)
+          @entry = Object::Dispatch.from_native_object(@connection, new_entry_object)
         end
         
         def invert_orgin

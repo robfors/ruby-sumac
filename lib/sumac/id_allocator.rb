@@ -1,5 +1,9 @@
-module Sumac
+class Sumac
   class IDAllocator
+    
+    def self.valid?(id)
+      id.is_a?(Integer) && id >= 0
+    end
     
     def initialize
       @allocated_ranges = []
@@ -7,7 +11,7 @@ module Sumac
     end
     
     def valid?(id)
-      id.is_a?(Integer) && id >= 0
+      self.class.valid?(id)
     end
     
     def allocate

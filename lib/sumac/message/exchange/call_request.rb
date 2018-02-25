@@ -1,10 +1,10 @@
-module Sumac
+class Sumac
   class Message
     class Exchange
       class CallRequest < Exchange
         include ID
         
-        def initialize(orchestrator)
+        def initialize(connection)
           super
           @exposed_object = nil
           @method_name = nil
@@ -17,12 +17,12 @@ module Sumac
             json_structure['exchange_type'] == 'call_request'
           raise MessageError unless json_structure['id'].is_a?(Integer)
           @id = json_structure['id']
-          @exposed_object = Object::Exposed.from_json_structure(@orchestrator, json_structure['exposed_object'])
+          @exposed_object = Object::Exposed.from_json_structure(@connection, json_structure['exposed_object'])
           raise MessageError unless json_structure['method_name'].is_a?(String)
           @method_name = json_structure['method_name']
           raise MessageError unless json_structure['arguments'].is_a?(Array)
           @arguments = json_structure['arguments'].map do |argument_json_structure|
-            Object::Dispatch.from_json_structure(@orchestrator, argument_json_structure)
+            Object::Dispatch.from_json_structure(@connection, argument_json_structure)
           end
           nil
         end
@@ -47,7 +47,7 @@ module Sumac
         def exposed_object=(new_exposed_object)
           raise MessageError unless new_exposed_object.is_a?(ExposedObject) ||
             new_exposed_object.is_a?(RemoteObject)
-          @exposed_object = Object::Exposed.from_native_object(@orchestrator, new_exposed_object)
+          @exposed_object = Object::Exposed.from_native_object(@connection, new_exposed_object)
         end
         
         def method_name
@@ -68,7 +68,7 @@ module Sumac
         def arguments=(new_arguments)
           raise MessageError unless new_arguments.is_a?(Array)
           @arguments = new_arguments.map do |native_argument|
-            Object::Dispatch.from_native_object(@orchestrator, native_argument)
+            Object::Dispatch.from_native_object(@connection, native_argument)
           end
         end
         

@@ -1,4 +1,4 @@
-module Sumac
+class Sumac
   class Message
     class Exchange
       class Notification < Exchange

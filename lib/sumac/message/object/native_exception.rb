@@ -1,9 +1,9 @@
-module Sumac
+class Sumac
   class Message
     class Object
       class NativeException < Object
       
-        def initialize(orchestrator)
+        def initialize(connection)
           super
           @type = nil
           @message = nil
@@ -15,13 +15,15 @@ module Sumac
             json_structure['object_type'] == 'native_exception'
           raise MessageError unless json_structure['type'].is_a?(::String)
           @type = json_structure['type']
-          raise MessageError unless json_structure['message'].is_a?(::String)
-          @message = json_structure['message']
+          if json_structure['message']
+            raise MessageError unless json_structure['message'].is_a?(::String)
+            @message = json_structure['message']
+          end
           nil
         end
         
         def parse_native_object(native_object)
-          raise MessageError unless native_object.kind_of?(StandardError)
+          raise MessageError unless native_object.kind_of?(Exception)
           @type = native_object.class.to_s
           @message = native_object.message
           nil
@@ -39,13 +41,13 @@ module Sumac
         
         def to_native_object
           raise MessageError unless setup?
-          Sumac::NativeException.new(@type, @message)
+          NativeError.new(@type, @message)
         end
         
         private
         
         def setup?
-          @type != nil && @message != nil
+          @type != nil
         end
         
       end

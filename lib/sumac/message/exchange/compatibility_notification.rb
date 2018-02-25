@@ -1,9 +1,9 @@
-module Sumac
+class Sumac
   class Message
     class Exchange
       class CompatibilityNotification < Notification
       
-        def initialize(orchestrator)
+        def initialize(connection)
           super
           @protocol_version = nil
         end

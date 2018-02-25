@@ -1,9 +1,9 @@
-module Sumac
+class Sumac
   class Message
     class Exchange
       module ID
       
-        def initialize(orchestrator)
+        def initialize(connection)
           super
           @id = nil
         end

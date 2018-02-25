@@ -1,9 +1,9 @@
-module Sumac
+class Sumac
   class Message
     class Object
       class Integer < Object
       
-        def initialize(orchestrator)
+        def initialize(connection)
           super
           @value = nil
         end

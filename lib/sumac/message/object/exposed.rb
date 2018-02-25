@@ -1,9 +1,9 @@
-module Sumac
+class Sumac
   class Message
     class Object
       class Exposed < Object
       
-        def initialize(orchestrator)
+        def initialize(connection)
           super
           @orgin = nil
           @id = nil
@@ -21,13 +21,13 @@ module Sumac
         end
         
         def parse_native_object(native_object)
-          case
-          when native_object.is_a?(ExposedObject)
+          case native_object
+          when ExposedObject
             @orgin = 'local'
-            @id = @orchestrator.local_references.load(native_object).exposed_id
-          when native_object.is_a?(RemoteObject)
+            @id = @connection.local_references.from_object(native_object).exposed_id
+          when RemoteObject
             @orgin = 'remote'
-            @id = @orchestrator.remote_references.load(native_object).exposed_id
+            @id = @connection.remote_references.from_object(native_object).exposed_id
           else
             raise MessageError
           end
@@ -48,11 +48,11 @@ module Sumac
           raise MessageError unless setup?
           case @orgin
           when 'local'
-            native_object = @orchestrator.local_references.retrieve(@id).exposed_object
+            native_object = @connection.local_references.from_id(@id).exposed_object
             raise MessageError unless native_object
             native_object
           when 'remote'
-            @orchestrator.remote_references.find_or_create(@id).remote_object
+            @connection.remote_references.from_id(@id).remote_object
           end
         end
         

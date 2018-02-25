@@ -1,5 +1,5 @@
-module Sumac
-  class NativeException < StandardError
+class Sumac
+  class NativeError < StandardError
   
     attr_reader :native_type, :native_message
     

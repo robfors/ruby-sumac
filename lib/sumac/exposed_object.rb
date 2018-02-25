@@ -1,4 +1,4 @@
-module Sumac
+class Sumac
   module ExposedObject
     
     def self.included(base)

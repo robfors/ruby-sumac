@@ -1,4 +1,4 @@
-module Sumac
+class Sumac
   class ArgumentError < StandardError
   
   end

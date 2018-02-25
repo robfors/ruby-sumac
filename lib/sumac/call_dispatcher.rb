@@ -1,44 +1,55 @@
-module Sumac
+class Sumac
   class CallDispatcher
-    include Emittable
     
-    def initialize(orchestrator)
-      raise "argument 'orchestrator' must be a Orchestrator" unless orchestrator.is_a?(Orchestrator)
-      @orchestrator = orchestrator
+    def initialize(connection)
+      raise "argument 'connection' must be a Connection" unless connection.is_a?(Connection)
+      @connection = connection
       @pending_requests = {}
       @id_allocator = IDAllocator.new
     end
-    
-    #def cancel_all
-    #  @pending_requests.each {|waiter| waiter.resume(nil) }
-    #  nil
-    #end
     
     def any_calls_pending?
       @pending_requests.any?
     end
     
+    def kill_all
+      raise unless @connection.at?(:kill)
+      @pending_requests.each do |id, waiter|
+        @pending_requests.delete(id)
+        waiter.resume(nil)
+      end
+    end
+    
     def make_call(exposed_object, method_name, arguments)
-      #binding.pry
-      raise if @orchestrator.handshake.active?
-      raise Closed if @orchestrator.shutdown.initiated?
-      id = @id_allocator.allocate
-      request = Message::Exchange::CallRequest.new(@orchestrator)
-      request.id = id
       raise unless exposed_object.is_a?(RemoteObject)
-      request.exposed_object = exposed_object
-      request.method_name = method_name
-      request.arguments = arguments
-      @orchestrator.transmitter.transmit(request)
-      waiter = Waiter.new
+      raise ClosedError unless @connection.at?(:active)
+      id = @id_allocator.allocate
+      request = Message::Exchange::CallRequest.new(@connection)
+      request.id = id
+      @connection.local_references.start_transaction
+      @connection.remote_references.start_transaction
+      begin
+        request.exposed_object = exposed_object
+        request.method_name = method_name
+        request.arguments = arguments
+      rescue StandardError => e # MessageError, StaleObjectError
+        @connection.local_references.rollback_transaction
+        @connection.remote_references.rollback_transaction
+        raise e
+      else
+        @connection.local_references.commit_transaction
+        @connection.remote_references.commit_transaction
+      end
+      @connection.messenger.send(request)
+      raise ClosedError if @connection.at?([:kill, :close])
+      waiter = QuackConcurrency::Waiter.new
       @pending_requests[id] = waiter
-      @orchestrator.mutex.unlock
+      @connection.mutex.unlock
       response = waiter.wait
-      @orchestrator.mutex.lock
-      @pending_requests.delete(id)
+      @connection.mutex.lock
       @id_allocator.free(id)
-      trigger(:request_completed)
-      #raise ConectionClosed if response == nil
+      @connection.closer.job_finished
+      raise ClosedError if response == nil
       raise response.exception if response.exception
       response.return_value
     ensure
@@ -46,8 +57,10 @@ module Sumac
     end
     
     def receive(exchange)
+      raise MessageError unless @connection.at?([:active, :initiate_shutdown, :shutdown])
       raise MessageError unless exchange.is_a?(Message::Exchange::CallResponse)
       waiter = @pending_requests[exchange.id]
+      @pending_requests.delete(exchange.id)
       raise MessageError unless waiter
       waiter.resume(exchange)
       nil
