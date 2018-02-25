@@ -5,6 +5,7 @@ require 'thread'
 
 require_relative "core_extensions.rb"
 
+require_relative "sumac/blocking_accessor.rb"
 require_relative "sumac/connection.rb"
 require_relative "sumac/exchange.rb"
 require_relative "sumac/exposed_object.rb"

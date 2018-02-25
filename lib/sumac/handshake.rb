@@ -26,7 +26,7 @@ module Sumac
       entry_exchange.send
       remote_entry_exchange = @waiter.wait
       raise unless remote_entry_exchange.is_a?(Exchange::EntryHandshake)
-      @connection.remote_entry = remote_entry_exchange.entry_object
+      @connection.remote_entry_accessor.value = remote_entry_exchange.entry_object
       complete
     end
     
