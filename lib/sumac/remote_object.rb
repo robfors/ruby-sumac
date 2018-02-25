@@ -19,7 +19,7 @@ class Sumac
       end
       return_value
     ensure
-      @orchestrator.mutex.unlock if @orchestrator.mutex.owned?
+      @connection.mutex.unlock if @connection.mutex.owned?
     end
     
     def __remote_reference__

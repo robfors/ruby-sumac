@@ -1,10 +1,9 @@
 class Sumac
   class Message
   
-    def self.from_json_structure(connection, json_structure)
-      new_message = new(connection)
-      new_message.parse_json_structure(json_structure)
-      new_message
+    def self.from_json(connection, json)
+      json_structure = JSON.parse(json)
+      from_json_structure(connection, json_structure)
     end
     
     def initialize(connection)

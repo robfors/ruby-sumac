@@ -8,8 +8,12 @@ class Sumac
       @transaction = []
     end
     
-    def update
-      @exposed_id_table.values.each { |reference| reference.update }
+    def detach
+      each { |reference| reference.detach }
+    end
+    
+    def destroy
+      each { |reference| reference.destroy }
     end
     
     def from_id(exposed_id)
@@ -52,7 +56,14 @@ class Sumac
     
     def find(exposed_id)
       reference = @exposed_id_table[exposed_id]
+      return if reference && reference.stale?
       reference
+    end
+    
+    def each
+      @exposed_id_table.values.each do |reference|
+        yield(reference) unless reference.stale?
+      end
     end
     
   end

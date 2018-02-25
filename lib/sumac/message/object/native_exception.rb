@@ -1,7 +1,7 @@
 class Sumac
   class Message
     class Object
-      class NativeException < Object
+      class NativeException < Base
       
         def initialize(connection)
           super
@@ -23,7 +23,7 @@ class Sumac
         end
         
         def parse_native_object(native_object)
-          raise MessageError unless native_object.kind_of?(Exception)
+          raise MessageError unless native_object.kind_of?(::Exception)
           @type = native_object.class.to_s
           @message = native_object.message
           nil

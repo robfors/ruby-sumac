@@ -1,7 +1,7 @@
 class Sumac
   class Message
     class Exchange
-      class Notification < Exchange
+      class Notification < Base
         
       end
     end

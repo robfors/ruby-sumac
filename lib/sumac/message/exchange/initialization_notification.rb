@@ -12,7 +12,7 @@ class Sumac
           raise MessageError unless json_structure.is_a?(Hash) &&
             json_structure['message_type'] == 'exchange' &&
             json_structure['exchange_type'] == 'initialization_notification'
-          @entry = Object::Dispatch.from_json_structure(@connection, json_structure['entry'])
+          @entry = Object.from_json_structure(@connection, json_structure['entry'])
           nil
         end
         
@@ -31,7 +31,7 @@ class Sumac
         end
         
         def entry=(new_entry_object)
-          @entry = Object::Dispatch.from_native_object(@connection, new_entry_object)
+          @entry = Object.from_native_object(@connection, new_entry_object)
         end
         
         def invert_orgin

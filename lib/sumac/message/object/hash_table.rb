@@ -1,7 +1,7 @@
 class Sumac
   class Message
     class Object
-      class HashTable < Object
+      class HashTable < Base
       
         def initialize(connection)
           super
@@ -16,8 +16,8 @@ class Sumac
           @entries = json_structure['entries'].map do |entry|
             raise MessageError unless entry.is_a?(::Hash) && entry.include?('key') && entry.include?('value')
             {
-              'key' => Dispatch.from_json_structure(@connection, entry['key']),
-              'value' => Dispatch.from_json_structure(@connection, entry['value'])
+              'key' => Object.from_json_structure(@connection, entry['key']),
+              'value' => Object.from_json_structure(@connection, entry['value'])
             }
           end
           nil
@@ -27,8 +27,8 @@ class Sumac
           raise MessageError unless native_object.is_a?(::Hash)
           @entries = native_object.map do |key, value|
             {
-              'key' => Dispatch.from_native_object(@connection, key),
-              'value' => Dispatch.from_native_object(@connection, value)
+              'key' => Object.from_native_object(@connection, key),
+              'value' => Object.from_native_object(@connection, value)
             }
           end
           nil

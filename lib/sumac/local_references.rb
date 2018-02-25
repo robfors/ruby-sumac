@@ -10,8 +10,12 @@ class Sumac
       @transaction = []
     end
     
-    def update
-      @exposed_id_table.values.each { |reference| reference.update }
+    def detach
+      @exposed_id_table.values.each { |reference| reference.detach }
+    end
+    
+    def destroy
+      @exposed_id_table.values.each { |reference| reference.destroy }
     end
     
     def from_id(exposed_id)

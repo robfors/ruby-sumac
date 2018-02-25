@@ -1,7 +1,7 @@
 class Sumac
   class Message
     class Exchange
-      class CallRequest < Exchange
+      class CallRequest < Base
         include ID
         
         def initialize(connection)
@@ -22,7 +22,7 @@ class Sumac
           @method_name = json_structure['method_name']
           raise MessageError unless json_structure['arguments'].is_a?(Array)
           @arguments = json_structure['arguments'].map do |argument_json_structure|
-            Object::Dispatch.from_json_structure(@connection, argument_json_structure)
+            Object.from_json_structure(@connection, argument_json_structure)
           end
           nil
         end
@@ -68,7 +68,7 @@ class Sumac
         def arguments=(new_arguments)
           raise MessageError unless new_arguments.is_a?(Array)
           @arguments = new_arguments.map do |native_argument|
-            Object::Dispatch.from_native_object(@connection, native_argument)
+            Object.from_native_object(@connection, native_argument)
           end
         end
         

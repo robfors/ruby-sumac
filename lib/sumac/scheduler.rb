@@ -25,7 +25,7 @@ class Sumac
           message_string = @connection.messenger_adapter.receive
         rescue Adapter::ClosedError
           @connection.mutex.synchronize do
-            unless @connection.at?(:close)
+            unless @connection.at?([:kill, :close])
               @connection.to(:kill)
             end
           end
@@ -37,12 +37,12 @@ class Sumac
     end
     
     def dispatch(message_string)
-      @worker_pool.run do
+      #@worker_pool.run do
         @connection.mutex.synchronize do
           break if @connection.at?([:kill, :close])
           @connection.messenger.receive(message_string)
         end
-      end
+      #end
       nil
     end
     

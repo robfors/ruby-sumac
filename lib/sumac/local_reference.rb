@@ -8,9 +8,8 @@ class Sumac
       @exposed_object = exposed_object
     end
     
-    def quietly_forget
+    def remove
       @connection.local_references.remove(self)
-      super
     end
     
   end

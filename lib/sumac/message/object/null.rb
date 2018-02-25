@@ -1,7 +1,7 @@
 class Sumac
   class Message
     class Object
-      class Null < Object
+      class Null < Base
       
         def initialize(connection)
           super

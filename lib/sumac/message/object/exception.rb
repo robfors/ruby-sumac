@@ -1,15 +1,16 @@
 class Sumac
   class Message
     class Object
-      class Exception < Object
+      class Exception < Base
       
         def self.map
-          [
-            ['no_method_exception', NoMethodError],
-            ['argument_exception', ArgumentError],
-            ['stale_object_exception', StaleObjectError],
-            ['unexposable_object_exception', UnexposableObjectError]
-          ]
+          @map ||=
+            [
+              ['no_method_exception', NoMethodError],
+              ['argument_exception', ArgumentError],
+              ['stale_object_exception', StaleObjectError],
+              ['unexposable_object_exception', UnexposableObjectError]
+            ]
         end
         
         def initialize(connection)

@@ -30,7 +30,7 @@ class Sumac
         @value_set = true
         @complete = true
         @value = new_value
-        @condition_variable.signal
+        @condition_variable.broadcast
       end
     end
     

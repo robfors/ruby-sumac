@@ -1,7 +1,7 @@
 class Sumac
   class Message
     class Object
-      class Array < Object
+      class Array < Base
       
         def initialize(connection)
           super
@@ -14,14 +14,14 @@ class Sumac
             json_structure['object_type'] == 'array'
           raise MessageError unless json_structure['elements'].is_a?(::Array)
           @elements = json_structure['elements'].map do |element|
-            Dispatch.from_json_structure(@connection, element)
+            Object.from_json_structure(@connection, element)
           end
           nil
         end
         
         def parse_native_object(native_object)
           raise MessageError unless native_object.is_a?(::Array)
-          @elements = native_object.map { |element| Dispatch.from_native_object(@connection, element) }
+          @elements = native_object.map { |element| Object.from_native_object(@connection, element) }
           nil
         end
         

@@ -1,7 +1,7 @@
 class Sumac
   class Message
     class Exchange
-      class CallResponse < Exchange
+      class CallResponse < Base
         include ID
         
         def initialize(connection)
@@ -18,9 +18,9 @@ class Sumac
           @id = json_structure['id']
           case
           when json_structure['return_value'] && !json_structure['exception']
-            @return_value = Object::Dispatch.from_json_structure(@connection, json_structure['return_value'])
+            @return_value = Object.from_json_structure(@connection, json_structure['return_value'])
           when !json_structure['return_value'] && json_structure['exception']
-            @exception = Object::Dispatch.from_json_structure(@connection, json_structure['exception'])
+            @exception = Object.from_json_structure(@connection, json_structure['exception'])
             raise MessageError unless @exception.class.one_of?(Object::Exception, Object::NativeException)
           else
             raise MessageError
@@ -51,7 +51,7 @@ class Sumac
         
         def return_value=(new_return_value)
           raise unless @exception == nil
-          @return_value = Object::Dispatch.from_native_object(@connection, new_return_value)
+          @return_value = Object.from_native_object(@connection, new_return_value)
         end
         
         def exception
@@ -61,7 +61,7 @@ class Sumac
         
         def exception=(new_exception_value)
           raise unless @return_value == nil
-          @exception = Object::Dispatch.from_native_object(@connection, new_exception_value)
+          @exception = Object.from_native_object(@connection, new_exception_value)
           raise MessageError unless @exception.class.one_of?(Object::Exception, Object::NativeException)
         end
         

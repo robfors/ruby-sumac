@@ -8,9 +8,8 @@ class Sumac
       @remote_object = RemoteObject.new(@connection, self)
     end
     
-    def quietly_forget
+    def remove
       @connection.remote_references.remove(self)
-      super
     end
     
   end

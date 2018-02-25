@@ -3,18 +3,21 @@ class Sumac
     include StateMachine
     
     state :active, initial: true
-    state :initiate_forget
+    state :forget_requested
+    state :detached
     state :stale
     
-    transition from: :active, to: [:initiate_forget, :stale]
-    transition from: :initiate_forget, to: :stale
+    transition from: :active, to: [:forget_requested, :detached, :stale]
+    transition from: :forget_requested, to: [:detached, :stale]
+    transition from: :detached, to: :stale
     
-    on_transition(from: :active) do
+    on_transition(from: :active, to: [:forget_requested, :stale]) do
       send_forget_notification
     end
     
     on_transition(to: :stale) do
-      quietly_forget
+      remove
+      @forget_condition_variable.broadcast
     end
     
     attr_reader :exposed_id
@@ -28,26 +31,13 @@ class Sumac
       @forget_condition_variable = ConditionVariable.new
     end
     
-    def update
-      raise if at?(:stale) # should have been removed by now
-      case @connection.at.to_sym
-      when :initiate_shutdown, :shutdown
-        quietly_to(:initiate_forget)
-      when :kill, :close
-        quietly_to(:initiate_forget)
-        to(:stale)
-      end
-    end
-    
     def local_forget_request
-      return if at?(:stale)
-      to(:initiate_forget) unless at?(:initiate_forget)
-      return if at?(:stale)
-      @forget_condition_variable.wait(@connection.mutex)
+      to(:forget_requested) if at?(:active)
+      @forget_condition_variable.wait(@connection.mutex) if at?([:forget_requested, :detached])
     end
     
     def remote_forget_request
-      raise if at?(:stale)
+      raise if at?([:detached, :stale])
       to(:stale)
     end
     
@@ -57,13 +47,21 @@ class Sumac
       @connection.messenger.send(message)
     end
     
-    def quietly_forget
-      quietly_to(:stale)
-      @forget_condition_variable.signal
+    def detach
+      to(:detached)
     end
     
     def callable?
       at?(:active)
+    end
+    
+    def destroy
+      raise unless at?(:detached)
+      to(:stale)
+    end
+    
+    def stale?
+      at?(:stale)
     end
     
   end

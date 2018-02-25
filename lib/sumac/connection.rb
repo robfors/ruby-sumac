@@ -19,17 +19,22 @@ class Sumac
     transition from: :shutdown,                 to: [:close, :kill]
     transition from: :kill,                     to: :close
     
-    on_transition do
-      @local_references.update
-      @remote_references.update
-    end
-    
     on_transition(from: :initial, to: :compatibility_handshake) do
       @handshake.send_compatibility_notification
     end
     
     on_transition(from: :compatibility_handshake, to: :initialization_handshake) do
       @handshake.send_initialization_notification
+    end
+    
+    on_transition(from: [:compatibility_handshake, :initialization_handshake], to: :kill) do
+      @local_references.detach
+      @remote_references.detach
+    end
+    
+    on_transition(from: :active) do
+      @local_references.detach
+      @remote_references.detach
     end
     
     on_transition(from: :active, to: [:initiate_shutdown, :shutdown]) do
@@ -54,6 +59,8 @@ class Sumac
     
     on_transition(to: :close) do
       @messenger.close
+      @local_references.destroy
+      @remote_references.destroy
       @closer.complete
       @sumac.trigger(:close)
     end
@@ -71,7 +78,6 @@ class Sumac
       @local_entry = entry
       @messenger_adapter = messenger
       @remote_entry = RemoteEntry.new
-      @state_machine = StateMachine.new(self)
       @mutex = Mutex.new
       @messenger = Messenger.new(self)
       @call_dispatcher = CallDispatcher.new(self)
@@ -86,14 +92,3 @@ class Sumac
     
   end
 end
-
-
-
-    
-    
-    
-    
-        
-    
-    
-    
