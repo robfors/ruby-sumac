@@ -5,70 +5,6 @@ require 'json'
 require_relative 'core_extensions.rb'
 
 module Sumac
-  
-  @call_number = -1
-  
-  def self.socket
-    raise "No socket assigned." unless @socket
-    @socket
-  end
-  
-  def self.socket=(new_socket)
-    @socket = new_socket
-  end
-  
-  def self.call(hash)
-    @call_number += 1
-    call_number = @call_number
-    hash['call_number'] = call_number
-    socket.puts hash.to_json
-    
-    loop do
-      json = socket.gets
-      raise "JSON not valid." unless JSON.validate(json)
-      response_hash = JSON.parse(json)
-      case response_hash['type']
-      when 'call'
-        klass = Kernel.const_get(response_hash['class'])
-        return_value = klass.new(response_hash['id']).send(response_hash['method'], *response_hash['arguments'])
-        return_hash = {type: 'return', value: return_value, call_number: response_hash['call_number']}
-        socket.puts return_hash.to_json
-      when 'return'
-        raise "call number for return is not valid." unless response_hash['call_number'] == call_number
-        return response_hash['value']
-      else
-        raise "response type invalid"
-      end
-    end
-  end
-  
-  def self.listen
-    loop do
-      json = socket.gets
-      raise "JSON not valid." unless JSON.validate(json)
-      response_hash = JSON.parse(json)
-      case response_hash['type']
-      when 'call'
-        klass = Kernel.const_get(response_hash['class'])
-        instance = klass.new(response_hash['id'])
-        method_proc = instance.method(response_hash['method'])
-        method_arguments = response_hash['arguments']
-        return_value = dispatch_k2cN1SExzC(method_proc, method_arguments)
-        return_hash = {type: 'return', value: return_value, call_number: response_hash['call_number']}
-        socket.puts(return_hash.to_json)
-      when 'return'
-        raise "response type 'return' not valid right now"
-      else
-        raise "response type invalid"
-      end
-    end
-  end
-    
-  #unique method name added to stack trace for later use
-  def self.dispatch_k2cN1SExzC(method_proc, method_arguments)
-    method_proc.call(*method_arguments)
-  end
-
 end
 
 
@@ -83,23 +19,123 @@ module Sumac
     def remote?
       caller[2].match(/`(?<method_name>.+)'/).to_h.symbolize_keys[:method_name] == 'dispatch_k2cN1SExzC'
     end
+
   end
 end
 
+
+module Sumac
+  class Connection
+    
+    def initialize
+      @call_number = -1
+    end
+    
+    def new_call_number
+      @call_number += 1
+    end
+    
+    def byte_in
+    end
+    
+    def message_out
+    end
+    
+  end
+end
+
+
 module Sumac
   class Adapter
-  
-    def connect
+    
+    def initialize
+      @calls_waiting = {}
+      @semaphore = Mutex.new
     end
     
     def disconnect
+      #@socket.close
     end
     
-    def call_request
+    def call(hash)
+      raise "Parameter missing from hash." unless hash.keys.include?(:type, :class, :id, :method)
+      raise "Unkown parameter found in hash." if (hash.keys - [:type, :class, :id, :method]).any?
+      semaphore.synchronize do
+        @call_number += 1
+        call_number = @call_number
+        hash['call_number'] = call_number
+        socket.puts hash.to_json
+        @calls_waiting[call_number] = {thread: Thread.current}
+      end
+      Thread.stop
     end
     
-    def call_response
+    def run
+      loop do
+        json = socket.gets
+        begin
+          hash = JSON.parse(json)
+        rescue JSON::ParserError => e  
+          raise "Invalid incoming json"
+        end
+        
+        case hash['type']
+        when 'call'
+          klass = Kernel.const_get(hash['class'])
+          instance = klass.new(hash['id'])
+          method_proc = instance.method(hash['method'])
+          method_arguments = hash['arguments']
+          return_value = dispatch_k2cN1SExzC(method_proc, method_arguments)
+          return_hash = {type: 'return', value: return_value, call_number: hash['call_number']}
+          socket.puts(return_hash.to_json)
+        when 'return'
+          @semaphore.synchronize do
+            call = @calls_waiting[hash['call_number']]
+            if call
+              call[:response] = response_hash['value']
+              call[:thread].wakeup
+            else
+              raise "call number #{hash['call_number']} for return is not valid."
+            end
+          end
+        else
+          raise "request type invalid"
+        end
+      end
     end
+    
+    #unique method name added to stack trace for later use
+    def self.dispatch_k2cN1SExzC(method_proc, method_arguments)
+      method_proc.call(*method_arguments)
+    end
+  end
+  
+  
+  class ClientAdapter < Adapter
+    def initialize(ip_address, port)
+      super()
+      @ip_adress = ip_adress
+      @port = port
+      @socket = nil
+    end
+  
+    def connect
+      @socket = TCPSocket.new(@ip_address, @port)
+    end
+  end
+  
+  
+  class ServerAdapter < Adapter
+    def initialize(port)
+      super()
+      @port = port
+      @socket = nil
+    end
+  
+    def accept
+      @socket = TCPServer.new(@port)
+    end
+    
   end
 end
 
