@@ -17,6 +17,8 @@ module Sumac
             InitializationNotification.from_json_structure(orchestrator, json_structure)
           when 'shutdown_notification'
             ShutdownNotification.from_json_structure(orchestrator, json_structure)
+          when 'forget_notification'
+            ForgetNotification.from_json_structure(orchestrator, json_structure)
           when 'call_request'
             CallRequest.from_json_structure(orchestrator, json_structure)
           when 'call_response'

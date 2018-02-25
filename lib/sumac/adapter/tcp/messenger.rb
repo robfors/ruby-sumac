@@ -23,6 +23,7 @@ module Sumac
           raise Closed if closed?
           begin
             message = @socket.gets
+            #binding.pry
             raise if message == nil
           rescue
             close

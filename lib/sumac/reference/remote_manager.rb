@@ -22,7 +22,14 @@ module Sumac
       end
       
       def remove(reference)
-        @exposed_id_table.delete(reference)
+        @exposed_id_table.delete(reference.exposed_id)
+      end
+      
+      def receive(exchange)
+        raise MessageError unless exchange.is_a?(Message::Exchange::ForgetNotification)
+        reference = load(exchange.exposed_object)
+        reference.receive(exchange)
+        nil
       end
       
       def force_forget_all
@@ -34,6 +41,7 @@ module Sumac
       def create(new_exposed_id)
         new_reference = Remote.new(@orchestrator, new_exposed_id)
         @exposed_id_table[new_exposed_id] = new_reference
+        new_reference.setup
         new_reference
       end
       

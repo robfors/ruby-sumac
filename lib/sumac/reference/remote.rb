@@ -9,17 +9,40 @@ module Sumac
         @orchestrator = orchestrator
         raise unless exposed_id.is_a?(Integer)
         @exposed_id = exposed_id
-        @forget_synchronizer = Synchronizer.new(@orchestrator, Message::Exchange::ForgetNotification, @exposed_id)
-        @forget_synchronizer.on(:synchronized) { @orchestrator.remote_references.remove(self) }
         @remote_object = RemoteObject.new(@orchestrator, self)
+        @forget_synchronizer = Synchronizer.new(@orchestrator, Message::Exchange::ForgetNotification)
+        @forget_waiter = Waiter.new
+      end
+      
+      def setup
+        @forget_synchronizer.local_notification.exposed_object = @remote_object
+        @forget_synchronizer.on(:synchronized) { forget_synchronized }
+      end
+      
+      def receive(exchange)
+        raise MessageError unless exchange.is_a?(Message::Exchange::ForgetNotification)
+        @forget_synchronizer.receive(exchange)
+        nil
       end
       
       def forget
-        @forget_synchronizer.initiate unless forgoten?
+        unless forgoten?
+          @forget_synchronizer.initiate
+          @orchestrator.mutex.unlock
+          @forget_waiter.wait
+          @orchestrator.mutex.lock
+        end
       end
       
       def forgoten?
-        @forget_synchronizer.initiated?
+        @forget_synchronizer.synchronized?
+      end
+      
+      private
+      
+      def forget_synchronized
+        @forget_waiter.resume
+        @orchestrator.remote_references.remove(self)
       end
       
     end

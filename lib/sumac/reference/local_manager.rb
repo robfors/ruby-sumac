@@ -7,7 +7,7 @@ module Sumac
         @orchestrator = orchestrator
         @id_allocator = IDAllocator.new
         @exposed_id_table = {}
-        @object_id_table = {}
+        @native_id_table = {}
       end
       
       def retrieve(exposed_id)
@@ -24,13 +24,27 @@ module Sumac
         reference
       end
       
-      def quietly_forget_all
+      def force_forget_all
+        @exposed_id_table = {}
+        @native_id_table = {}
+      end
+      
+      def remove(reference)
+        @exposed_id_table.delete(reference.exposed_id)
+        @native_id_table.delete(native_id(reference.exposed_object))
+      end
+      
+      def receive(exchange)
+        raise MessageError unless exchange.is_a?(Message::Exchange::ForgetNotification)
+        reference = find(exchange.exposed_object)
+        reference.receive(exchange)
+        nil
       end
       
       private
       
       def find(exposed_object)
-        reference = @object_id_table[native_id(exposed_object)]
+        reference = @native_id_table[native_id(exposed_object)]
         reference
       end
       
@@ -38,7 +52,8 @@ module Sumac
         new_exposed_id = @id_allocator.allocate
         new_reference = Local.new(@orchestrator, new_exposed_id, exposed_object)
         @exposed_id_table[new_exposed_id] = new_reference
-        @object_id_table[native_id(exposed_object)] = new_reference
+        @native_id_table[native_id(exposed_object)] = new_reference
+        new_reference.setup
         new_reference
       end
       

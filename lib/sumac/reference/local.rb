@@ -10,6 +10,18 @@ module Sumac
         raise unless exposed_id.is_a?(Integer)
         @exposed_id = exposed_id
         @exposed_object = exposed_object
+        @forget_synchronizer = Synchronizer.new(@orchestrator, Message::Exchange::ForgetNotification)
+      end
+      
+      def setup
+        @forget_synchronizer.local_notification.exposed_object = @exposed_object
+        @forget_synchronizer.on(:synchronized) { @orchestrator.local_references.remove(self) }
+      end
+      
+      def receive(exchange)
+        raise MessageError unless exchange.is_a?(Message::Exchange::ForgetNotification)
+        @forget_synchronizer.receive(exchange)
+        nil
       end
       
     end

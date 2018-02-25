@@ -10,19 +10,18 @@ module Sumac
     
     def method_missing(method_name, *arguments, &block)  # blocks not working yet
       @orchestrator.mutex.lock
-      if @orchestrator.closed? || @remote_reference.forgeten?
-        @orchestrator.mutex.unlock
+      if @orchestrator.closed? || @remote_reference.forgoten?
         raise StaleObject
       end
       begin
         arguments << block.to_lambda if block_given?
         return_value = @orchestrator.call_dispatcher.make_call(self, method_name.to_s, arguments)
       rescue Closed
-        @orchestrator.mutex.unlock
         raise StaleObject
       end
-      @orchestrator.mutex.unlock
       return_value
+    ensure
+      @orchestrator.mutex.unlock if @orchestrator.mutex.owned?
     end
     
     def __remote_reference__
@@ -30,7 +29,9 @@ module Sumac
     end
     
     def forget
-      @remote_reference.forget
+      @orchestrator.mutex.lock
+      @remote_reference.forget unless @orchestrator.closed?
+      @orchestrator.mutex.unlock
       nil
     end
     

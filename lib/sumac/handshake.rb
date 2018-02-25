@@ -18,6 +18,19 @@ module Sumac
       !@initialization_synchronizer.synchronized?
     end
     
+    def receive(exchange)
+      case exchange
+      when Message::Exchange::CompatibilityNotification
+        @compatibility_synchronizer.receive(exchange)
+      when Message::Exchange::InitializationNotification
+        raise MessageError unless @compatibility_synchronizer.synchronized?
+        @initialization_synchronizer.receive(exchange)
+      else
+        raise MessageError
+      end
+      nil
+    end
+    
     private
     
     def confirm_compatibility

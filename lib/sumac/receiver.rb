@@ -19,15 +19,6 @@ module Sumac
       @thread.join unless Thread.current == @thread
     end
     
-    def register(exchange_class, id, receiver)
-      raise unless @receivers[[exchange_class, id]] == nil
-      @receivers[[exchange_class, id]] = receiver
-    end
-    
-    def deregister(exchange_class, id, receiver)
-      @receivers.delete[[exchange_class, id]]
-    end
-    
     private
     
     def async_loop
@@ -54,10 +45,27 @@ module Sumac
     end
     
     def process(exchange)
-      id = exchange.respond_to?(:id) ? exchange.id : nil
-      receiver = @receivers[[exchange.class, id]] || @receivers[[exchange.class, nil]]
-      raise MessageError unless receiver
-      receiver.receive(exchange)
+      case exchange
+      when Message::Exchange::CompatibilityNotification, Message::Exchange::InitializationNotification
+        @orchestrator.handshake.receive(exchange)
+      when Message::Exchange::CallRequest
+        @orchestrator.call_processor.receive(exchange)
+      when Message::Exchange::CallResponse
+        @orchestrator.call_dispatcher.receive(exchange)
+      when Message::Exchange::ShutdownNotification
+        @orchestrator.shutdown.receive(exchange)
+      when Message::Exchange::ForgetNotification
+        case exchange.exposed_object
+        when RemoteObject
+          @orchestrator.remote_references.receive(exchange)
+        when ExposedObject
+          @orchestrator.local_references.receive(exchange)
+        else
+          raise MessageError
+        end
+      else
+        raise MessageError
+      end
       nil
     end
     
