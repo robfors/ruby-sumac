@@ -4,7 +4,7 @@ module Sumac
     def initialize(connection, socket)
       raise "argument 'connection' must be a Connection" unless connection.is_a?(Connection)
       @connection = connection
-      @socket = socket
+      @outbound_exchange_sender = OutboundExchangeSender.new(connection, socket)
       @semaphore = Mutex.new
     end
     
@@ -14,9 +14,7 @@ module Sumac
         if exchange.is_a?(Exchange::Request)
           @connection.outbound_request_manager.submit(exchange)
         end
-        message = exchange.to_message
-        message.invert_orgin
-        @socket.puts(message.to_json) #fix space issue
+        @outbound_exchange_sender.send(exchange)
       end
       nil
     end

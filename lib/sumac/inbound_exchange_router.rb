@@ -4,42 +4,14 @@ module Sumac
     def initialize(connection, socket)
       raise "argument 'connection' must be a Connection" unless connection.is_a?(Connection)
       @connection = connection
-      @socket = socket
+      @inbound_exchange_receiver = InboundExchangeReceiver.new(connection, socket)
       @thread = nil
-    end
-    
-    def get_next_exchange
-      begin
-        json = @socket.gets #fix space isssue
-      rescue
-        raise 'network error'
-      end
-      raise 'network error' unless json
-      
-      message = Message::Exchange::Dispatch.from_json(@connection, json)  
-      
-      #begin
-      #  
-      #rescue
-      #  raise 'message invalid'
-      #end
-      
-      #binding.pry
-      exchange = Exchange::Dispatch.from_message(@connection, message)   
-      
-      #begin
-      #  
-      #rescue
-      #  raise 'exchange invalid'
-      #end
-      
-      exchange
     end
     
     def run
       @thread = Thread.new do
         loop do
-          exchange = get_next_exchange
+          exchange = @inbound_exchange_receiver.get_next_exchange
           process(exchange)
         end
       end
