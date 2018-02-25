@@ -9,6 +9,7 @@ class Sumac
     
     def job_finished
       try_close if @connection.at?([:shutdown, :kill])
+      nil
     end
     
     def try_close
@@ -27,15 +28,18 @@ class Sumac
       end
       @future.get
       @connection.scheduler.join
+      nil
     end
     
     def complete
       @future.set
+      nil
     end
     
     def join
       @future.get
       @connection.scheduler.join
+      nil
     end
     
     private

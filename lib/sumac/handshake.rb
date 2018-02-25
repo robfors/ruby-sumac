@@ -16,8 +16,13 @@ class Sumac
     
     def send_initialization_notification
       message = Message::Exchange::InitializationNotification.new(@connection)
-      message.entry = @connection.local_entry
-      @connection.messenger.send(message)
+      begin
+        message.entry = @connection.local_entry
+      rescue UnexposableObjectError
+        @connection.to(:kill)
+      else
+        @connection.messenger.send(message)
+      end
       nil
     end
     

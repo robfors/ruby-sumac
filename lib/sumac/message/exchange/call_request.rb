@@ -7,6 +7,7 @@ class Sumac
         def initialize(connection)
           super
           @exposed_object = nil
+          @child = nil
           @method_name = nil
           @arguments = nil
         end
@@ -17,7 +18,9 @@ class Sumac
             json_structure['exchange_type'] == 'call_request'
           raise MessageError unless json_structure['id'].is_a?(Integer)
           @id = json_structure['id']
-          @exposed_object = Object::Exposed.from_json_structure(@connection, json_structure['exposed_object'])
+          exposed_object = Object.from_json_structure(@connection, json_structure['exposed_object'])
+          raise MessageError unless exposed_object.is_a?(Object::Exposed) || exposed_object.is_a?(Object::ExposedChild)
+          @exposed_object = exposed_object
           raise MessageError unless json_structure['method_name'].is_a?(String)
           @method_name = json_structure['method_name']
           raise MessageError unless json_structure['arguments'].is_a?(Array)
@@ -45,9 +48,11 @@ class Sumac
         end
         
         def exposed_object=(new_exposed_object)
-          raise MessageError unless new_exposed_object.is_a?(ExposedObject) ||
-            new_exposed_object.is_a?(RemoteObject)
-          @exposed_object = Object::Exposed.from_native_object(@connection, new_exposed_object)
+          unless new_exposed_object.is_a?(RemoteObject) || new_exposed_object.is_a?(RemoteObjectChild) ||
+                 new_exposed_object.respond_to?(:__sumac_exposed_object__)
+            raise MessageError
+          end
+          @exposed_object = Object.from_native_object(@connection, new_exposed_object)
         end
         
         def method_name

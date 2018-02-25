@@ -21,11 +21,11 @@ class Sumac
         end
         
         def parse_native_object(native_object)
-          case native_object
-          when ExposedObject
+          case
+          when native_object.respond_to?(:__sumac_exposed_object__)
             @orgin = 'local'
             @id = @connection.local_references.from_object(native_object).exposed_id
-          when RemoteObject
+          when native_object.is_a?(RemoteObject)
             @orgin = 'remote'
             @id = @connection.remote_references.from_object(native_object).exposed_id
           else

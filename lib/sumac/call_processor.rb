@@ -15,7 +15,7 @@ class Sumac
     def receive(exchange)
       raise MessageError unless exchange.is_a?(Message::Exchange::CallRequest)
       raise MessageError unless @connection.at?([:active, :initiate_shutdown])
-      raise MessageError unless exchange.exposed_object.is_a?(ExposedObject)
+      raise MessageError unless exchange.exposed_object.is_a?(ExposedObject) || exchange.exposed_object.is_a?(ExposedObjectChild)
       response = process(exchange)
       @connection.messenger.send(response) if response
       finished

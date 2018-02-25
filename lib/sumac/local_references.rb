@@ -32,9 +32,9 @@ class Sumac
     
     def remove(reference)
       @exposed_id_table.delete(reference.exposed_id)
-      references = @native_id_table[native_id(reference.exposed_object)]
+      references = @native_id_table[reference.exposed_object.__native_id__]
       references.delete(reference)
-      @native_id_table.delete(native_id(reference.exposed_object)) if references.empty?
+      @native_id_table.delete(reference.exposed_object.__native_id__) if references.empty?
       @id_allocator.free(reference.exposed_id)
     end
     
@@ -57,27 +57,23 @@ class Sumac
       new_exposed_id = @id_allocator.allocate
       new_reference = LocalReference.new(@connection, new_exposed_id, exposed_object)
       @exposed_id_table[new_exposed_id] = new_reference
-      references = @native_id_table[native_id(exposed_object)]
+      references = @native_id_table[exposed_object.__native_id__]
       if references
         references << new_reference
       else
-        @native_id_table[native_id(exposed_object)] = [new_reference]
+        @native_id_table[exposed_object.__native_id__] = [new_reference]
       end
       @transaction << new_reference if @transaction
       new_reference
     end
     
     def find(exposed_object)
-      references = @native_id_table[native_id(exposed_object)]
+      references = @native_id_table[exposed_object.__native_id__]
       return nil unless references
       callable_references = references.select { |reference| reference.callable? }
       raise if callable_references.length > 1
       reference = callable_references.first
       reference
-    end
-    
-    def native_id(exposed_object)
-      exposed_object.__id__
     end
     
   end

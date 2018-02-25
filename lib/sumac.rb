@@ -2,10 +2,9 @@ require 'socket'
 require 'pry'
 require 'json'
 require 'thread'
-
-require_relative "../../quack_concurrency/lib/quack_concurrency.rb"
-require_relative "../../state_machine/state_machine.rb"
-require_relative "../../emittable/emittable.rb"
+require 'quack_concurrency'
+require 'queued_state_machine'
+require 'emittable'
 
 require_relative "core_extensions.rb"
 
@@ -18,6 +17,7 @@ require_relative "sumac/closed_error.rb"
 require_relative "sumac/closer.rb"
 require_relative "sumac/connection.rb"
 require_relative "sumac/exposed_object.rb"
+require_relative "sumac/exposed_object_child.rb"
 require_relative "sumac/handshake.rb"
 require_relative "sumac/id_allocator.rb"
 require_relative "sumac/reference.rb"
@@ -40,6 +40,7 @@ require_relative "sumac/message/object/array.rb"
 require_relative "sumac/message/object/boolean.rb"
 require_relative "sumac/message/object/exception.rb"
 require_relative "sumac/message/object/exposed.rb"
+require_relative "sumac/message/object/exposed_child.rb"
 require_relative "sumac/message/object/float.rb"
 require_relative "sumac/message/object/hash_table.rb"
 require_relative "sumac/message/object/integer.rb"
@@ -52,6 +53,7 @@ require_relative "sumac/no_method_error.rb"
 require_relative "sumac/native_error.rb"
 require_relative "sumac/remote_entry.rb"
 require_relative "sumac/remote_object.rb"
+require_relative "sumac/remote_object_child.rb"
 require_relative "sumac/remote_reference.rb"
 require_relative "sumac/remote_references.rb"
 require_relative "sumac/scheduler.rb"

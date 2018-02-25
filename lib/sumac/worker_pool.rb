@@ -23,10 +23,12 @@ class Sumac
         @threads.delete(@thread_class.current)
         @semaphore.release
       end
+      nil
     end
     
     def join
       @threads.each(&:join)
+      nil
     end
     
   end

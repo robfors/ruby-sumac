@@ -1,6 +1,6 @@
 class Sumac
   class Reference
-    include StateMachine
+    include QueuedStateMachine
     
     state :active, initial: true
     state :forget_requested

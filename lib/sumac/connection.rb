@@ -1,6 +1,6 @@
 class Sumac
   class Connection
-    include StateMachine
+    include QueuedStateMachine
     
     state :initial, initial: true
     state :compatibility_handshake

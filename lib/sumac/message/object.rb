@@ -25,7 +25,9 @@ class Sumac
           when 'hash_table'
             HashTable
           when 'exposed'
-             Exposed
+            Exposed
+          when 'exposed_child'
+            ExposedChild
           else
             raise MessageError
           end
@@ -35,26 +37,28 @@ class Sumac
       
       def self.from_native_object(connection, native_object)
         object_class = 
-          case native_object
-          when ExposedObject, RemoteObject
+          case
+          when native_object.is_a?(RemoteObject) || (native_object.respond_to?(:__sumac_exposed_object__) && native_object.respond_to?(:__native_id__))
             Exposed
-          when NilClass
+          when native_object.is_a?(RemoteObjectChild) || (native_object.respond_to?(:__sumac_exposed_object__) && native_object.respond_to?(:__parent__))
+            ExposedChild
+          when native_object == nil
             Null
-          when TrueClass, FalseClass
+          when native_object == true || native_object == false
             Boolean
-          when *Exception.map.transpose[1]
+          when Exception.map.transpose[1].any? { |klass| native_object.is_a?(klass) }
             Exception
-          when ::Exception
+          when native_object.is_a?(::Exception)
             NativeException
-          when ::Integer
+          when native_object.is_a?(::Integer)
             Integer
-          when ::Float
+          when native_object.is_a?(::Float)
             Float
-          when ::String
+          when native_object.is_a?(::String)
             String
-          when ::Array
+          when native_object.is_a?(::Array)
             Array
-          when ::Hash
+          when native_object.is_a?(::Hash)
             HashTable
           else
             raise UnexposableObjectError
