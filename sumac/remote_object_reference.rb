@@ -1,16 +1,23 @@
 module Sumac
   class RemoteObjectReference < ObjectReference
-  
-    def initialize(connection, id)
+    
+    
+    attr_reader :remote_object_wrapper
+    
+    
+    def initialize(connection, exposed_id)
       @connection = connection
-      @id = id
+      @exposed_id = exposed_id
+      @remote_object_wrapper = RemoteObjectWrapper.new(self)
     end
-  
+    
+    
     def call(method_name, arguments)
       arguments.map! { |argument| native_to_reference(argument) }
-      return_value = RemoteRequest.send(@connection, self, method_name, arguments)
-      return reference_to_native(return_value)
+      response = OutboundRequest.send(@connection, self, method_name, arguments)
+      return reference_to_native(response)
     end
+    
     
   end
 end

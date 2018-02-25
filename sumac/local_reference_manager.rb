@@ -1,42 +1,60 @@
 module Sumac
   class LocalReferenceManager
+    include Celluloid
     
     def initialize(connection)
-      @semaphore = Mutex.new
       @connection = connection
-      @id_allocator = IDAllocator.new
-      @id_table = {}
+      @id_manager = IDManager.new
+      @exposed_id_table = {}
       @global_id_table = {}
     end
     
-    def get(id)
-      raise 'ID is not valid' unless @id_allocator.valid?(id)
-      semaphore.synchronize do
-        entry = @id_table[id]
-      end
-      raise: 'object has been forgotten' unless entry #make better exception
-      return entry
+    
+    def assign(exposed_object, exposed_id)
+      create(exposed_object, exposed_id)
     end
     
-    def find_or_create(exposed_object)
-      find(exposed_object) or create(exposed_object)
-    end
     
-    def create(exposed_object)
-      new_id = @id_allocator.allocate
-      new_entry = LocalObjectReference.new(@connection, new_id, exposed_object)
-      semaphore.synchronize do
-        @id_table[new_entry.id] = new_entry
-        @global_id_table[new_entry.exposed_object.__global_sumac_id__] = new_entry
-      end
-      return new_entry
-    end
-    
-    def find(exposed_object)
-      semaphore.synchronize do
-        existing_entry = @global_id_table[exposed_object.__global_sumac_id__]
+    def retrieve_or_create(arg)
+      if @id_manager.valid?(arg)
+        exposed_id = arg
+        return retrieve(exposed_id)
+      else
+        exposed_object = arg
+        return retrieve(exposed_object) || create(exposed_object)
       end
     end
+    
+    
+    def retrieve(arg)
+      if @id_manager.valid?(arg)
+        exposed_id = arg
+        reference = @exposed_id_table[exposed_id]
+        raise 'object has been forgotten' unless reference #make better exception
+        return reference
+      else
+        exposed_object = arg
+        reference = @global_id_table[exposed_object.__global_sumac_id__]
+        return reference
+      end
+    end
+    
+    
+    private
+    
+    
+    def create(exposed_object, exposed_id = nil)
+      if exposed_id
+        new_exposed_id = @id_manager.allocate(exposed_id)
+      else
+        new_exposed_id = @id_manager.allocate
+      end
+      new_reference = LocalObjectReference.new(@connection, new_exposed_id, exposed_object)
+      @exposed_id_table[new_reference.exposed_id] = new_reference
+      @global_id_table[new_reference.exposed_object.__global_sumac_id__] = new_reference
+      return new_reference
+    end
+    
     
   end
 end

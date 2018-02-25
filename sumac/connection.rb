@@ -1,24 +1,27 @@
 module Sumac
   class Connection
-    include Celluloid
+  
+  
+    attr_reader :message_manager, :inbound_request_manager,
+      :outbound_request_manager, :local_reference_manager, :remote_reference_manager
     
-    attr_reader :exposed_id_manager, :message_manager, :inbound_request_manager,
-      :outbound_request_manager, :exposed_local_object_manager
     
-    def initialize(socket, entry_object)
+    def initialize(socket, local_entry_object = nil)
       @socket = socket
-      @entry_object = entry_object
-      @exposed_id_manager = ExposedIDManager.new
       @message_manager = MessageManager.new(self)
       @inbound_request_manager = InboundRequestManager.new(self)
       @outbound_request_manager = OutboundRequestManager.new(self)
-      @exposed_local_object_manager = ExposedLocalObjectManager.new(self, entry_object)
-      @remote_entry_wrapper = RemoteObjectWrapper.new(RemoteReachableObject.new(self, @exposed_id_manager.generate_remote_entry_id))
+      @local_reference_manager = LocalReferenceManager.new(self)
+      @local_reference_manager.assign(local_entry_object, 0)
+      @remote_reference_manager = RemoteReferenceManager.new(self)
+      @remote_entry_wrapper = @remote_reference_manager.create(0).remote_object_wrapper
     end
+    
     
     def entry
       @remote_entry_wrapper
     end
+    
     
   end
 end

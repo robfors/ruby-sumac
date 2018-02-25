@@ -1,18 +1,13 @@
 module Sumac
-  class MessageHelper
+  module MessageHelper
   
-    def inbound_id_adjustment?
-      false
-    end
-    
-    def object_to_message(object)
+  
+    def reference_to_message(object)
       case
-      when object.is_a?(ReachableObject)
-        if adjust_id?
-          @connection.object_id_manager.convert_remote_to_local(object.id)
-        else
-          object.id
-        end
+      when object.is_a?(LocalObjectReference)
+        'L' + object.exposed_id.to_s
+      when object.is_a?(RemoteObjectReference)
+        'R' + object.exposed_id.to_s
       when object.is_a?(String) || @object.is_a?(Numeric)
         object.to_json
       when object.is_a?(Array)
@@ -24,18 +19,12 @@ module Sumac
       end
     end
     
-    def message_to_object(object)
-      if object.is_a?(Integer)
-        if adjust_id?
-          id = @connection.object_id_manager.convert_local_to_remote(object)
-        else
-          id = object
-        end
-        if @connection.object_id_manager.local?(id)
-          LocalReachableObject.new(@connection, id)
-        else
-          RemoteReachableObject.new(@connection, id)
-        end
+    
+    def message_to_reference(object)
+      if object.is_a?(String) && object[0] == 'L'
+        @connection.local_reference_manager.retrieve(object[1..-1].to_i)
+      elsif object.is_a?(String) && object[0] == 'R'
+        @connection.remote_reference_manager.retrieve(object[1..-1].to_i)
       else
         object = JSON.parse(object)
         case
@@ -50,6 +39,7 @@ module Sumac
         end
       end
     end
+    
     
   end
 end

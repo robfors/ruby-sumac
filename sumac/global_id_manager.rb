@@ -1,15 +1,19 @@
 module Sumac
   module GlobalIDManager
   
-    @semaphore = Mutex.new
-    @last_global_id = 0
-      
-    def self.generate_global_id
-      semaphore.synchronize do
-        @last_global_id += 1
-        @last_global_id
-      end
+  
+    @id_manager = IDManager.new
+    
+    
+    def self.allocate
+      @id_manager.allocate
     end
+    
+    
+    def self.free(id)
+      @id_manager.free(id)
+    end
+    
     
   end
 end

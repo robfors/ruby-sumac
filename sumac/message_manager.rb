@@ -2,40 +2,41 @@ module Sumac
   class MessageManager
     include Celluloid
     
+    
     def initialize(connection)
       @connection = connection
-      aync.run
+      async.run
     end
+    
     
     def get_next_message
-      @connection.socket.gets #fix space isssue
+      begin
+        Message.parse(@connection.socket.gets) #fix space isssue
+      rescue
+        raise 'system error' #return error
+      end
     end
     
-    def send_message(object)
-      raise unless object.respond_to?(:message)
-      @connection.socket.puts(object.message) #fix space issue
+    
+    def submit(message)
+      @connection.socket.puts(message.text) #fix space issue
     end
+    
     
     def run
       loop do
         message = get_next_message
-        begin
-          json = JSON.parse(message)
-        rescue
-          raise 'system error' #return error
-        end
-        case json['type']
+        case message.type
         when 'request'
-          request = InboundRequest.new(@connection, message)
-          InboundRequestManager.submit_request(request)
+          @connection.inbound_request_manager.submit_request(message)
         when 'response'
-          response = InboundResponse.new(@connection, message)
-          OutboundRequestManager.submit_response(response)
+          @connection.outbound_request_manager.submit_response(message)
         else
           raise 'system error' #return error
         end
       end
     end
+    
     
   end
 end

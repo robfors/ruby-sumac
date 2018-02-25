@@ -1,27 +1,32 @@
 module Sumac
   class OutboundRequestManager
     
+    
     def initialize(connection)
       @connection = connection
-      @semaphore = Mutex.new
       @pending_requests = {}
-      @sequence_number_manager = SequenceNumberManager.new
+      @id_manager = IDManager.new
+      @semaphore = Mutex.new
     end
+    
     
     def submit_request(request)
-      request.sequence_number = @sequence_number_manager.generate_sequence_number
-      semaphore.synchronize do
+      @semaphore.synchronize do
+        request.sequence_number = @id_manager.allocate
         @pending_requests[request.sequence_number] = request
+        @connection.message_manager.submit(request.message)
       end
-      @connection.message_manager.send_message(request)
     end
     
-    def submit_response(response)
-      semaphore.synchronize do
-        @pending_requests[response.sequence_number].submit_response(response)
-        @pending_requests.delete(response.sequence_number)
+    
+    def submit_response(message)
+      @semaphore.synchronize do
+        @pending_requests[message.sequence_number].submit_response(message)
+        @pending_requests.delete(message.sequence_number)
+        @id_manager.free(message.sequence_number)
       end
     end
+    
     
   end
 end
