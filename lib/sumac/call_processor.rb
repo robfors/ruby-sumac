@@ -31,7 +31,7 @@ module Sumac
       @orchestrator.mutex.lock
       response = Message::Exchange::CallResponse.new(@orchestrator)
       response.id = request.id
-      if request.exposed_object.class.__exposed_methods__.include?(request.method_name)
+      if request.exposed_object.__exposed_methods__.include?(request.method_name)
         #binding.pry
         begin
           @orchestrator.mutex.unlock
