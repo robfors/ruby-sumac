@@ -3,7 +3,7 @@ module Sumac
   
   
     def __global_sumac_id__
-      @__global_sumac_id__ ||= GlobalIDManager.allocate
+      @__global_sumac_id__ ||= GlobalIDAllocator.allocate
     end
     
     

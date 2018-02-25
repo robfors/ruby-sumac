@@ -1,6 +1,5 @@
 module Sumac
-  class IDManager
-    include Celluloid
+  class IDAllocator
     
     
     def initialize
@@ -10,8 +9,9 @@ module Sumac
     
     
     def valid?(id)
-      id.is_a?(Integer) && id < 0
+      id.is_a?(Integer) && id >= 0
     end
+    
     
     def allocate(id = nil)
       @semaphore.lock

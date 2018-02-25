@@ -8,11 +8,11 @@ module Sumac
     end
     
     def resume(value = nil)
-      queue << value
+      @queue << value
     end
     
     def wait
-      queue.pop
+      @queue.pop
     end
     
   end

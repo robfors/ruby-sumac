@@ -8,11 +8,11 @@ module Sumac
     
     
     def method_missing(method_name, *arguments, &block)  # blocks not working yet
-      @remote_object_reference.call(method_name, arguments)
+      @remote_object_reference.call(method_name.to_s, arguments)
     end
     
     
-    def __sumac_remote_object_reference__
+    def __remote_object_reference__
       @remote_object_reference
     end
     
