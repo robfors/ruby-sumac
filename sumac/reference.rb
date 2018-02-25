@@ -1,5 +1,5 @@
 module Sumac
-  module Message
+  module Reference
   
   end
 end

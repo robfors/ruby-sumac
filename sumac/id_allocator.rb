@@ -1,30 +1,23 @@
 module Sumac
   class IDAllocator
     
-    
     def initialize
       @allocated_ranges = []
       @semaphore = Mutex.new
     end
     
-    
     def valid?(id)
       id.is_a?(Integer) && id >= 0
     end
     
-    
-    def allocate(id = nil)
+    def allocate
       @semaphore.lock
-      if id
-        raise unless valid?(id) && free?(id)
+      if @allocated_ranges.empty?
+        id = 0
+      elsif @allocated_ranges.first.first == 0
+        id = @allocated_ranges.first.last.succ
       else
-        if @allocated_ranges.empty?
-          id = 0
-        elsif @allocated_ranges.first.first == 0
-          id = @allocated_ranges.first.last.succ
-        else
-          id = 0
-        end
+        id = 0
       end
       
       preceding_range = @allocated_ranges.take_while{ |range| range.last < id }.last
@@ -52,7 +45,6 @@ module Sumac
       return id
     end
     
-    
     def free(id)
       @semaphore.lock
       raise unless valid?(id) && allocated?(id)
@@ -75,25 +67,20 @@ module Sumac
       nil
     end
     
-    
     private
-    
     
     def free?(id)
       !allocated?(id)
     end
     
-    
     def allocated?(id)
       enclosing_range(id)
     end
-    
     
     def enclosing_range(id)
       possible_range = @allocated_ranges.find{ |range| range.last >= id }
       return possible_range if possible_range && possible_range.first <= id
     end
-    
     
   end
 end
