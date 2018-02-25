@@ -2,8 +2,8 @@ module Sumac
   class Connection
     include Emittable
     
-    def initialize(socket, local_entry = nil)
-      @orchestrator = Orchestrator.new(self, socket, local_entry)
+    def initialize(messenger, local_entry = nil)
+      @orchestrator = Orchestrator.new(self, messenger, local_entry)
       @orchestrator.start
       @shutdown_waiter = Waiter.new
     end

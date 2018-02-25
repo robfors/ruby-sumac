@@ -5,7 +5,8 @@ module Sumac
       raise "argument 'orchestrator' must be a Orchestrator" unless orchestrator.is_a?(Orchestrator)
       @orchestrator = orchestrator
       @thread = nil
-      @started = false
+      @receivers = {}
+      @waiter = Waiter.new
     end
     
     def start
@@ -18,14 +19,23 @@ module Sumac
       @thread.join unless Thread.current == @thread
     end
     
+    def register(exchange_class, id, receiver)
+      raise unless @receivers[[exchange_class, id]] == nil
+      @receivers[[exchange_class, id]] = receiver
+    end
+    
+    def deregister(exchange_class, id, receiver)
+      @receivers.delete[[exchange_class, id]]
+    end
+    
     private
     
     def async_loop
       loop do
-        #binding.pry
         begin
-          json = @orchestrator.network.receive
-        rescue Closed
+          json = @orchestrator.messenger.receive
+        rescue Adapter::Closed, Adapter::ConnectionError
+          @orchestrator.mutex.synchronize { network_error unless @orchestrator.closed? }
           break
         end
         @orchestrator.mutex.synchronize do
@@ -44,18 +54,10 @@ module Sumac
     end
     
     def process(exchange)
-      case exchange
-      when Message::Exchange::CompatibilityNotification, Message::Exchange::InitializationNotification
-        @orchestrator.handshake.receive(exchange)
-      when Message::Exchange::CallRequest
-        @orchestrator.call_processor.receive(exchange)
-      when Message::Exchange::CallResponse
-        @orchestrator.call_dispatcher.receive(exchange)
-      when Message::Exchange::ShutdownNotification
-        @orchestrator.shutdown.receive(exchange)
-      else
-        raise MessageError
-      end
+      id = exchange.respond_to?(:id) ? exchange.id : nil
+      receiver = @receivers[[exchange.class, id]] || @receivers[[exchange.class, nil]]
+      raise MessageError unless receiver
+      receiver.receive(exchange)
       nil
     end
     
@@ -64,6 +66,12 @@ module Sumac
         @orchestrator.close
         @orchestrator.connection.trigger(:message_error)
       end
+      nil
+    end
+    
+    def network_error
+      @orchestrator.close
+      @orchestrator.connection.trigger(:network_error)
       nil
     end
     

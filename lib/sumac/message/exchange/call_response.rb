@@ -1,8 +1,9 @@
 module Sumac
   class Message
     class Exchange
-      class CallResponse < RequestResponse
-      
+      class CallResponse < Exchange
+        include ID
+        
         def initialize(orchestrator)
           super
           @return_value = nil

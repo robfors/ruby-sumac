@@ -1,7 +1,7 @@
 module Sumac
   class Message
     class Exchange
-      class RequestResponse < Exchange
+      module ID
       
         def initialize(orchestrator)
           super

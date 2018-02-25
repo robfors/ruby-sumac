@@ -1,8 +1,9 @@
 module Sumac
   class Message
     class Exchange
-      class CallRequest < RequestResponse
-      
+      class CallRequest < Exchange
+        include ID
+        
         def initialize(orchestrator)
           super
           @exposed_object = nil

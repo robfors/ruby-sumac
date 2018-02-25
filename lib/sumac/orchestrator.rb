@@ -3,29 +3,29 @@ module Sumac
     include Emittable
     
     attr_reader :mutex, :connection, :call_dispatcher, :call_processor,
-      :receiver, :transmitter, :handshake, :network, :shutdown,
-      :local_references, :remote_references, :local_entry
+      :receiver, :transmitter, :handshake, :shutdown,
+      :local_references, :remote_references, :local_entry, :messenger
     
     attr_accessor :remote_entry
     
-    def initialize(connection, socket, local_entry)
+    def initialize(connection, messenger, local_entry)
       @connection = connection
       @local_entry = local_entry
       @remote_entry = nil
       @started = false
       @mutex = Mutex.new
       @handshake_waiter = Waiter.new
-      setup(socket)
+      @messenger = messenger
+      setup
       @closed = false
     end
     
-    def setup(socket)
+    def setup
+      @receiver = Receiver.new(self)
       @call_dispatcher = CallDispatcher.new(self)
       @call_processor = CallProcessor.new(self)
-      @receiver = Receiver.new(self)
       @transmitter = Transmitter.new(self)
       @handshake = Handshake.new(self)
-      @network = Network.new(self, socket)
       @shutdown = Shutdown.new(self)
       @local_references = Reference::LocalManager.new(self)
       @remote_references = Reference::RemoteManager.new(self)
@@ -51,7 +51,7 @@ module Sumac
     def close
       return if closed?
       @closed = true
-      @network.close
+      @messenger.close
       @mutex.unlock
       @receiver.finish
       @mutex.lock

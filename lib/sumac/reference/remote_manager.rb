@@ -21,7 +21,12 @@ module Sumac
         reference
       end
       
-      def quietly_forget_all
+      def remove(reference)
+        @exposed_id_table.delete(reference)
+      end
+      
+      def force_forget_all
+        @exposed_id_table = {}
       end
       
       private

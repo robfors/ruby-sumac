@@ -1,17 +1,17 @@
 module Sumac
   class Network
   
-    def initialize(orchestrator, socket)
+    def initialize(orchestrator, messenger)
       raise "argument 'orchestrator' must be a Orchestrator" unless orchestrator.is_a?(Orchestrator)
       @orchestrator = orchestrator
-      @socket = socket
+      @messenger = messenger
     end
     
     def transmit(json)
       raise Closed if @orchestrator.closed?
       begin
-        @socket.puts(json)
-      rescue
+        @messenger.send(json)
+      rescue Adapter::Closed, Adapter::ConnectionError
         network_error unless @orchestrator.closed?
         raise Closed
       end
@@ -21,9 +21,8 @@ module Sumac
     def receive
       raise Closed if @orchestrator.closed?
       begin
-        json = @socket.gets
-        raise Closed unless json
-      rescue
+        json = @messenger.receive
+      rescue Adapter::Closed, Adapter::ConnectionError
         @orchestrator.mutex.synchronize do
           unless @orchestrator.closed?
             network_error
@@ -35,7 +34,7 @@ module Sumac
     end
     
     def close
-      @socket.close rescue nil
+      #@messenger.close
       nil
     end
     

@@ -2,12 +2,21 @@ require 'socket'
 require 'pry'
 require 'json'
 require 'thread'
+require 'celluloid'
+require 'celluloid/io'
 
 require_relative "core_extensions.rb"
 
+require_relative "sumac/adapter.rb"
+require_relative "sumac/adapter/closed.rb"
+require_relative "sumac/adapter/tcp.rb"
+require_relative "sumac/adapter/tcp/messenger.rb"
+require_relative "sumac/adapter/tcp/server.rb"
+require_relative "sumac/adapter/connection_error.rb"
 require_relative "sumac/emittable.rb"
 require_relative "sumac/call_dispatcher.rb"
 require_relative "sumac/call_processor.rb"
+require_relative "sumac/celluloid_mutex.rb"
 require_relative "sumac/closed.rb"
 require_relative "sumac/connection.rb"
 require_relative "sumac/exposed_object.rb"
@@ -16,11 +25,12 @@ require_relative "sumac/id_allocator.rb"
 require_relative "sumac/message.rb"
 require_relative "sumac/message/exchange.rb"
 require_relative "sumac/message/object.rb"
-require_relative "sumac/message/exchange/request_response.rb"
+require_relative "sumac/message/exchange/id.rb"
 require_relative "sumac/message/exchange/call_request.rb"
 require_relative "sumac/message/exchange/call_response.rb"
 require_relative "sumac/message/exchange/notification.rb"
 require_relative "sumac/message/exchange/compatibility_notification.rb"
+require_relative "sumac/message/exchange/forget_notification.rb"
 require_relative "sumac/message/exchange/dispatch.rb"
 require_relative "sumac/message/exchange/initialization_notification.rb"
 require_relative "sumac/message/exchange/shutdown_notification.rb"
@@ -54,18 +64,8 @@ Thread.abort_on_exception = true
 
 module Sumac
 
-  def self.connect(ip, port, entry = nil)
-    socket = TCPSocket.new(ip, port)
-    #entry = entry_class ? entry_class.new : nil
-    connection = Sumac::Connection.new(socket, entry)
-    connection
+  def self.start(messenger, entry = nil)
+    Sumac::Connection.new(messenger, entry)
   end
   
-  def self.listen(port, entry = nil)
-    server = TCPServer.new(port)
-    socket = server.accept
-    #entry = entry_class ? entry_class.new : nil
-    connection = Sumac::Connection.new(socket, entry)
-    connection
-  end
 end

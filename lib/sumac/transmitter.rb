@@ -9,7 +9,19 @@ module Sumac
     def transmit(exchange)
       raise unless exchange.is_a?(Message::Exchange)
       exchange.invert_orgin
-      @orchestrator.network.transmit(exchange.to_json)
+      json = exchange.to_json
+      begin
+        @orchestrator.messenger.send(json)
+      rescue Adapter::Closed, Adapter::ConnectionError
+        network_error unless @orchestrator.closed?
+        raise Closed
+      end
+      nil
+    end
+    
+    def network_error
+      @orchestrator.close
+      @orchestrator.connection.trigger(:network_error)
       nil
     end
     

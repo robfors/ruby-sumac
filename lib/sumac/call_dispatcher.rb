@@ -7,6 +7,7 @@ module Sumac
       @orchestrator = orchestrator
       @pending_requests = {}
       @id_allocator = IDAllocator.new
+      @orchestrator.receiver.register(Message::Exchange::CallResponse, nil, self)
     end
     
     #def cancel_all
@@ -19,7 +20,6 @@ module Sumac
     end
     
     def make_call(exposed_object, method_name, arguments)
-      @orchestrator.mutex.lock
       raise if @orchestrator.handshake.active?
       raise Closed if @orchestrator.shutdown.initiated?
       id = @id_allocator.allocate

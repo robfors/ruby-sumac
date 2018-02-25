@@ -6,6 +6,7 @@ module Sumac
       raise "argument 'orchestrator' must be a Orchestrator" unless orchestrator.is_a?(Orchestrator)
       @orchestrator = orchestrator
       @active_threads = []
+      @orchestrator.receiver.register(Message::Exchange::CallRequest, nil, self)
     end
     
     def receive(exchange)

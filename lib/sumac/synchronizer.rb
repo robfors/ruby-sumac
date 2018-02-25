@@ -4,18 +4,30 @@ module Sumac
     
     attr_reader :local_notification, :remote_notification
     
-    def initialize(orchestrator, notification_class)
+    def initialize(orchestrator, notification_class, id = nil)
       raise "argument 'orchestrator' must be a Orchestrator" unless orchestrator.is_a?(Orchestrator)
       @orchestrator = orchestrator
       raise unless notification_class.ancestors.include?(Message::Exchange::Notification)
       @notification_class = notification_class
-      @local_notification = @notification_class.new(@orchestrator)
+      @id = id
+      if @id
+        @local_notification = @notification_class.new(@orchestrator, @id)
+      else
+        @local_notification = @notification_class.new(@orchestrator)
+      end
       @remote_notification = nil
+      #@state = :initialized
+      @state = :listening
+      @orchestrator.receiver.register(@notification_class, @id, self)
+    end
+    
+    def listen
+      raise unless @state == :initialized
       @state = :listening
     end
     
     def initiate
-      raise unless @state == :listening
+      raise unless @state.one_of?(:initialized, :listening)
       transmit_notification
       @state = :initiated
       nil
@@ -27,6 +39,7 @@ module Sumac
     
     def receive(exchange)
       raise MessageError unless exchange.kind_of?(@notification_class)
+      trigger(:received)
       case @state
       when :listening
         @remote_notification = exchange

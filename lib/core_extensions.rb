@@ -187,3 +187,21 @@ module JSON
     end
   end
 end
+
+
+class Proc
+  def self.to_lambda(block)
+    raise 'argument is not a Proc' unless block.is_a?(Proc)
+    if RUBY_ENGINE && RUBY_ENGINE == "jruby"
+      return lambda(&block)
+    else
+      obj = Object.new
+      obj.define_singleton_method(:_, &block)
+      return obj.method(:_).to_proc
+    end
+  end
+  
+  def to_lambda
+    self.class.to_lambda(self)
+  end
+end
