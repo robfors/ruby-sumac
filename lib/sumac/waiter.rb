@@ -1,5 +1,3 @@
-require 'thread'
-
 module Sumac
   class Waiter
   

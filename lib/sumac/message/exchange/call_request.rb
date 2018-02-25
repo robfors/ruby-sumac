@@ -3,7 +3,7 @@ module Sumac
     class Exchange
       class CallRequest < RequestResponse
       
-        def initialize(connection)
+        def initialize(orchestrator)
           super
           @exposed_object = nil
           @method_name = nil
@@ -11,18 +11,19 @@ module Sumac
         end
         
         def parse_json_structure(json_structure)
-          raise unless json_structure.is_a?(Hash) &&
+          raise MessageError unless json_structure.is_a?(Hash) &&
             json_structure['message_type'] == 'exchange' &&
             json_structure['exchange_type'] == 'call_request'
-          raise unless json_structure['id'].is_a?(Integer)
+          raise MessageError unless json_structure['id'].is_a?(Integer)
           @id = json_structure['id']
-          @exposed_object = Object::Exposed.from_json_structure(@connection, json_structure['exposed_object'])
-          raise unless json_structure['method_name'].is_a?(String)
+          @exposed_object = Object::Exposed.from_json_structure(@orchestrator, json_structure['exposed_object'])
+          raise MessageError unless json_structure['method_name'].is_a?(String)
           @method_name = json_structure['method_name']
-          raise unless json_structure['arguments'].is_a?(Array)
+          raise MessageError unless json_structure['arguments'].is_a?(Array)
           @arguments = json_structure['arguments'].map do |argument_json_structure|
-            Object::Dispatch.from_json_structure(@connection, argument_json_structure)
+            Object::Dispatch.from_json_structure(@orchestrator, argument_json_structure)
           end
+          nil
         end
         
         def to_json_structure
@@ -38,39 +39,40 @@ module Sumac
         end
         
         def exposed_object
-          raise unless setup?
+          raise MessageError unless setup?
           @exposed_object.to_native_object
         end
         
         def exposed_object=(new_exposed_object)
-          raise unless new_exposed_object.is_a?(ExposedObject) || new_exposed_object.is_a?(RemoteObject)
-          @exposed_object = Object::Exposed.from_native_object(@connection, new_exposed_object)
+          raise MessageError unless new_exposed_object.is_a?(ExposedObject) ||
+            new_exposed_object.is_a?(RemoteObject)
+          @exposed_object = Object::Exposed.from_native_object(@orchestrator, new_exposed_object)
         end
         
         def method_name
-          raise unless setup?
+          raise MessageError unless setup?
           @method_name
         end
         
         def method_name=(new_method_name)
-          raise unless new_method_name.is_a?(String)
+          raise MessageError unless new_method_name.is_a?(String)
           @method_name = new_method_name
         end
         
         def arguments
-          raise unless setup?
+          raise MessageError unless setup?
           @arguments.map(&:to_native_object)
         end
         
         def arguments=(new_arguments)
-          raise unless new_arguments.is_a?(Array)
+          raise MessageError unless new_arguments.is_a?(Array)
           @arguments = new_arguments.map do |native_argument|
-            Object::Dispatch.from_native_object(@connection, native_argument)
+            Object::Dispatch.from_native_object(@orchestrator, native_argument)
           end
         end
         
         def invert_orgin
-          raise unless setup?
+          raise MessageError unless setup?
           @exposed_object.invert_orgin
           @arguments.each { |argument| argument.invert_orgin if argument.respond_to?(:invert_orgin) }
           nil

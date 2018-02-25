@@ -3,17 +3,18 @@ module Sumac
     class Exchange
       class RequestResponse < Exchange
       
-        def initialize(connection)
+        def initialize(orchestrator)
           super
           @id = nil
         end
         
         def id
-          raise unless setup?
+          raise MessageError unless setup?
           @id
         end
         
         def id=(new_id)
+          raise MessageErro unless new_id.is_a?(Integer)
           @id = new_id
         end
         

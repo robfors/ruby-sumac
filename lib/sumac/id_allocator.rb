@@ -3,7 +3,7 @@ module Sumac
     
     def initialize
       @allocated_ranges = []
-      @semaphore = Mutex.new
+      @mutex = Mutex.new
     end
     
     def valid?(id)
@@ -11,7 +11,7 @@ module Sumac
     end
     
     def allocate
-      @semaphore.lock
+      @mutex.lock
       if @allocated_ranges.empty?
         id = 0
       elsif @allocated_ranges.first.first == 0
@@ -41,12 +41,21 @@ module Sumac
         @allocated_ranges.insert(new_index, (id..id))
       end
       
-      @semaphore.unlock
-      return id
+      @mutex.unlock
+      
+      if block_given?
+        begin
+          yield(id)
+        ensure
+          free(id)
+        end
+      else
+        id
+      end
     end
     
     def free(id)
-      @semaphore.lock
+      @mutex.lock
       raise unless valid?(id) && allocated?(id)
       
       enclosing_range = enclosing_range(id)
@@ -63,18 +72,18 @@ module Sumac
         @allocated_ranges.insert(enclosing_range_index.succ, (id.succ..enclosing_range.last))
       end
       
-      @semaphore.unlock
+      @mutex.unlock
       nil
+    end
+    
+    def allocated?(id)
+      enclosing_range(id)
     end
     
     private
     
     def free?(id)
       !allocated?(id)
-    end
-    
-    def allocated?(id)
-      enclosing_range(id)
     end
     
     def enclosing_range(id)

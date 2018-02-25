@@ -3,24 +3,26 @@ module Sumac
     class Exchange
       module Dispatch
       
-        def self.from_json(connection, json)
+        def self.from_json(orchestrator, json)
           json_structure = JSON.parse(json)
-          from_json_structure(connection, json_structure)
+          from_json_structure(orchestrator, json_structure)
         end
         
-        def self.from_json_structure(connection, json_structure)
-          raise unless json_structure.is_a?(Hash) && json_structure['message_type'] == 'exchange'
+        def self.from_json_structure(orchestrator, json_structure)
+          raise MessageError unless json_structure.is_a?(Hash) && json_structure['message_type'] == 'exchange'
           case json_structure['exchange_type']
-          when 'compatibility_handshake'
-            CompatibilityHandshake.from_json_structure(connection, json_structure)
-          when 'entry_handshake'
-            EntryHandshake.from_json_structure(connection, json_structure)
+          when 'compatibility_notification'
+            CompatibilityNotification.from_json_structure(orchestrator, json_structure)
+          when 'initialization_notification'
+            InitializationNotification.from_json_structure(orchestrator, json_structure)
+          when 'shutdown_notification'
+            ShutdownNotification.from_json_structure(orchestrator, json_structure)
           when 'call_request'
-            CallRequest.from_json_structure(connection, json_structure)
+            CallRequest.from_json_structure(orchestrator, json_structure)
           when 'call_response'
-            CallResponse.from_json_structure(connection, json_structure)
+            CallResponse.from_json_structure(orchestrator, json_structure)
           else
-            raise
+            raise MessageError
           end
         end
         

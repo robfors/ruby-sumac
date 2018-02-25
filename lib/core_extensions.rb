@@ -22,6 +22,15 @@ class Object
   def is_not_a? klass
     !is_a?(klass)
   end
+  
+  def in?(arg)
+    arg.include?(self)
+  end
+  
+  def one_of?(*args)
+    args.include?(self)
+  end
+  
 end
 
 

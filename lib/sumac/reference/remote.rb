@@ -4,12 +4,12 @@ module Sumac
       
       attr_reader :exposed_id, :remote_object
       
-      def initialize(connection, exposed_id)
-        raise "argument 'connection' must be a Connection" unless connection.is_a?(Connection)
-        @connection = connection
+      def initialize(orchestrator, exposed_id)
+        raise "argument 'orchestrator' must be a Orchestrator" unless orchestrator.is_a?(Orchestrator)
+        @orchestrator = orchestrator
         raise unless exposed_id.is_a?(Integer)
         @exposed_id = exposed_id
-        @remote_object = RemoteObject.new(connection, self)
+        @remote_object = RemoteObject.new(@orchestrator, self)
       end
       
     end

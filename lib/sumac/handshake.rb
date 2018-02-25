@@ -1,54 +1,56 @@
 module Sumac
   class Handshake
+    include Emittable
     
-    def initialize(connection)
-      raise "argument 'connection' must be a Connection" unless connection.is_a?(Connection)
-      @connection = connection
-      @sent = false
-      @waiter = Waiter.new
-      @mutex = Mutex.new
-      @resource = ConditionVariable.new
-      @complete = false
+    def initialize(orchestrator)
+      raise "argument 'orchestrator' must be a Orchestrator" unless orchestrator.is_a?(Orchestrator)
+      @orchestrator = orchestrator
+      @compatibility_synchronizer = Synchronizer.new(@orchestrator, Message::Exchange::CompatibilityNotification)
+      @initialization_synchronizer = Synchronizer.new(@orchestrator, Message::Exchange::InitializationNotification)
     end
     
-    def start
-      raise if @sent
-      @sent = true
-      compatibility_exchange = Exchange::CompatibilityHandshake.new(@connection)
-      compatibility_exchange.protocol_version = 1
-      compatibility_exchange.send
-      remote_compatibility_exchange = @waiter.wait
-      raise unless remote_compatibility_exchange.is_a?(Exchange::CompatibilityHandshake)
-      raise unless remote_compatibility_exchange.protocol_version == 1
-      # know compatible
-      entry_exchange = Exchange::EntryHandshake.new(@connection)
-      entry_exchange.entry_object = @connection.local_entry
-      entry_exchange.send
-      remote_entry_exchange = @waiter.wait
-      raise unless remote_entry_exchange.is_a?(Exchange::EntryHandshake)
-      @connection.remote_entry_accessor.value = remote_entry_exchange.entry_object
-      complete
+    def initiate
+      confirm_compatibility
+      nil
     end
     
-    def complete?
-      @complete
+    def active?
+      !@initialization_synchronizer.synchronized?
     end
     
-    def submit_remote_exchange(exchange)
-      @waiter.resume(exchange)
-    end
-    
-    def wait_until_complete
-      @mutex.synchronize do
-        @resource.wait(@mutex) unless complete?
+    def receive(exchange)
+      case exchange
+      when Message::Exchange::CompatibilityNotification
+        @compatibility_synchronizer.receive(exchange)
+      when Message::Exchange::InitializationNotification
+        @initialization_synchronizer.receive(exchange)
+      else
+        raise MessageError
       end
+      nil
     end
     
     private
     
-    def complete
-      @resource.broadcast
-      @complete = true
+    def confirm_compatibility
+      @compatibility_synchronizer.local_notification.protocol_version = 1
+      @compatibility_synchronizer.initiate
+      @compatibility_synchronizer.on(:synchronized) { compatibility_synchronized }
+      nil
+    end
+    
+    def compatibility_synchronized
+      #close unless @compatibility_synchronizer.remote_notification.protocol_version == 1
+      @initialization_synchronizer.local_notification.entry = @orchestrator.local_entry
+      @initialization_synchronizer.initiate
+      @initialization_synchronizer.on(:synchronized) { initialization_synchronized }
+      nil
+    end
+    
+    def initialization_synchronized
+      @orchestrator.remote_entry = @initialization_synchronizer.remote_notification.entry
+      trigger(:completed)
+      nil
     end
     
   end

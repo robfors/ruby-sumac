@@ -3,13 +3,13 @@ module Sumac
     class Object
       class Null < Object
       
-        def initialize(connection)
+        def initialize(orchestrator)
           super
           @setup = false
         end
         
         def parse_json_structure(json_structure)
-          raise unless json_structure.is_a?(::Hash) &&
+          raise MessageError unless json_structure.is_a?(::Hash) &&
             json_structure['message_type'] == 'object' &&
             json_structure['object_type'] == 'null'
           @setup = true
@@ -17,18 +17,18 @@ module Sumac
         end
         
         def parse_native_object(native_object)
-          raise unless native_object == nil
+          raise MessageError unless native_object == nil
           @setup = true
           nil
         end
         
         def to_json_structure
-          raise unless setup?
+          raise MessageError unless setup?
           {'message_type' => 'object', 'object_type' => 'null'}
         end
         
         def to_native_object
-          raise unless setup?
+          raise MessageError unless setup?
           nil
         end
         

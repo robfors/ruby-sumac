@@ -1,50 +1,70 @@
 module Sumac
   class Orchestrator
+    include Emittable
     
-    def initialize(connection)
-      raise "argument 'connection' must be a Connection" unless connection.is_a?(Connection)
+    attr_reader :mutex, :connection, :call_dispatcher, :call_processor,
+      :receiver, :transmitter, :handshake, :network, :shutdown,
+      :local_references, :remote_references, :local_entry
+    
+    attr_accessor :remote_entry
+    
+    def initialize(connection, socket, local_entry)
       @connection = connection
+      @local_entry = local_entry
+      @remote_entry = nil
       @started = false
+      @mutex = Mutex.new
+      @handshake_waiter = Waiter.new
+      setup(socket)
+      @closed = false
+    end
+    
+    def setup(socket)
+      @call_dispatcher = CallDispatcher.new(self)
+      @call_processor = CallProcessor.new(self)
+      @receiver = Receiver.new(self)
+      @transmitter = Transmitter.new(self)
+      @handshake = Handshake.new(self)
+      @network = Network.new(self, socket)
+      @shutdown = Shutdown.new(self)
+      @local_references = Reference::LocalManager.new(self)
+      @remote_references = Reference::RemoteManager.new(self)
+      nil
     end
     
     def start
-      raise if @started
-      @started = true
-      compatibility_exchange = Exchange::CompatibilityHandshake.new(@connection)
-      compatibility_exchange.protocol_version = 1
-      compatibility_exchange.send
-      remote_compatibility_exchange = @waiter.wait
-      raise unless remote_compatibility_exchange.is_a?(Exchange::CompatibilityHandshake)
-      raise unless remote_compatibility_exchange.protocol_version == 1
-      # know compatible
-      entry_exchange = Exchange::EntryHandshake.new(@connection)
-      entry_exchange.entry_object = @connection.local_entry
-      entry_exchange.send
-      remote_entry_exchange = @waiter.wait
-      raise unless remote_entry_exchange.is_a?(Exchange::EntryHandshake)
-      @connection.remote_entry = remote_entry_exchange.entry_object
-      complete
-    end
-    
-    def complete?
-      @complete
-    end
-    
-    def submit_remote_exchange(exchange)
-      @waiter.resume(exchange)
-    end
-    
-    def wait_until_complete
       @mutex.synchronize do
-        @resource.wait(@mutex) unless complete?
+        raise if @started
+        @started = true
+        @handshake.initiate
+        @handshake.on(:completed) { @handshake_waiter.resume }
+        @receiver.start
       end
+      @handshake_waiter.wait
+      nil
     end
     
-    private
+    #def kill
+    #  close
+    #end
     
-    def complete
-      @resource.broadcast
-      @complete = true
+    def close
+      return if closed?
+      @closed = true
+      @network.close
+      @mutex.unlock
+      @receiver.finish
+      @mutex.lock
+      #@call_dispatcher.cancel_all
+      #@call_processor.kill_all
+      #@local_references.quietly_forget_all
+      #@remote_references.quietly_forget_all
+      trigger(:close_complete)
+      @connection.trigger(:close)
+    end
+    
+    def closed?
+      @closed
     end
     
   end
