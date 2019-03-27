@@ -1,70 +1,35 @@
-class Sumac
+module Sumac
+  
+  # Allocates ids. IDs can be returned then reallocated again.
+  # Uses ranges to reduce memory consumption.
+  # @api private
   class IDAllocator
-    
-    def self.valid?(id)
-      id.is_a?(Integer) && id >= 0
-    end
-    
+
+    # Return a new {IDAllocator}.
+    # @return [IDAllocator]
     def initialize
       @allocated_ranges = []
-      @mutex = Mutex.new
     end
-    
-    def valid?(id)
-      self.class.valid?(id)
-    end
-    
+
+    # Allocate an id.
+    # Removes id from the allocator's id space until it is returned.
+    # @return [Integer]
     def allocate
-      @mutex.lock
       if @allocated_ranges.empty?
-        id = 0
+        add_leading_range
       elsif @allocated_ranges.first.first == 0
-        id = @allocated_ranges.first.last.succ
+        extend_leading_range
       else
-        id = 0
-      end
-      
-      preceding_range = @allocated_ranges.take_while{ |range| range.last < id }.last
-      preceding_range_index = @allocated_ranges.find_index(preceding_range) if preceding_range
-      
-      following_range_index = @allocated_ranges.find_index { |range| range.first > id }
-      following_range = @allocated_ranges[following_range_index] if following_range_index
-      
-      immediately_preceding_range = preceding_range if preceding_range && preceding_range.last.succ == id
-      immediately_following_range = following_range if following_range && following_range.first.pred == id
-      
-      if immediately_preceding_range && immediately_following_range
-        @allocated_ranges[preceding_range_index] = (preceding_range.first..following_range.last)
-        @allocated_ranges.delete(following_range)
-      elsif immediately_preceding_range
-        @allocated_ranges[preceding_range_index] = (preceding_range.first..id)
-      elsif immediately_following_range
-        @allocated_ranges[following_range_index] = (id..following_range.last)
-      else
-        new_index = preceding_range ? preceding_range_index.succ : 0
-        @allocated_ranges.insert(new_index, (id..id))
-      end
-      
-      @mutex.unlock
-      
-      if block_given?
-        begin
-          yield(id)
-        ensure
-          free(id)
-        end
-      else
-        id
+        add_leading_range
       end
     end
-    
+
+    # Return +id+ back to the allocator so it can be allocated again in the future.
+    # @note trying to free an unallocated id will cause undefined behavior
+    # @return [void]
     def free(id)
-      @mutex.lock
-      raise unless valid?(id) && allocated?(id)
-      
-      enclosing_range = enclosing_range(id)
-      enclosing_range_index = @allocated_ranges.find_index(enclosing_range)
-      
+      enclosing_range_index = @allocated_ranges.index { |range| range.last >= id && range.first <= id }
+      enclosing_range = @allocated_ranges[enclosing_range_index]
       if enclosing_range.size == 1
         @allocated_ranges.delete(enclosing_range)
       elsif enclosing_range.first == id
@@ -75,25 +40,37 @@ class Sumac
         @allocated_ranges[enclosing_range_index] = (enclosing_range.first..id.pred)
         @allocated_ranges.insert(enclosing_range_index.succ, (id.succ..enclosing_range.last))
       end
-      
-      @mutex.unlock
-      nil
     end
-    
-    def allocated?(id)
-      enclosing_range(id)
-    end
-    
+
     private
-    
-    def free?(id)
-      !allocated?(id)
+
+    # Adds a leading allocated range for the id of 0.
+    # If the range is then adjoining with the next, the two will be joined.
+    # @return [Integer] the allocated id
+    def add_leading_range
+      @allocated_ranges.prepend((0..0))
+      try_to_join_leading_ranges
+      0
     end
-    
-    def enclosing_range(id)
-      possible_range = @allocated_ranges.find{ |range| range.last >= id }
-      return possible_range if possible_range && possible_range.first <= id
+
+    # Expands the first allocated range by adding one id to the end.
+    # If the range is then adjoining with the next, the two will be joined.
+    # @return [Integer] the allocated id
+    def extend_leading_range
+      id = @allocated_ranges[0].last.succ
+      @allocated_ranges[0] = (@allocated_ranges[0].first..@allocated_ranges[0].last.succ)
+      try_to_join_leading_ranges
+      id
     end
-    
+
+    # Join the first two ranges if they are adjoining.
+    # @return [void]
+    def try_to_join_leading_ranges
+      if @allocated_ranges[1] && @allocated_ranges[0].last.succ == @allocated_ranges[1].first
+        @allocated_ranges[0] = (@allocated_ranges[0].first..@allocated_ranges[1].last)
+        @allocated_ranges.delete_at(1)
+      end
+    end
+
   end
 end

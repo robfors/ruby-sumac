@@ -1,94 +1,84 @@
-require 'socket'
-require 'pry'
 require 'json'
 require 'thread'
 require 'quack_concurrency'
-require 'queued_state_machine'
-require 'emittable'
+require 'forwardable'
 
-require_relative "core_extensions.rb"
+require 'monkey_patch/array.rb'
+require 'monkey_patch/object.rb'
 
-require_relative "sumac/adapter.rb"
-require_relative "sumac/adapter/closed.rb"
-require_relative "sumac/argument_error.rb"
-require_relative "sumac/call_dispatcher.rb"
-require_relative "sumac/call_processor.rb"
-require_relative "sumac/closed_error.rb"
-require_relative "sumac/closer.rb"
-require_relative "sumac/connection.rb"
-require_relative "sumac/exposed_object.rb"
-require_relative "sumac/exposed_object_child.rb"
-require_relative "sumac/handshake.rb"
-require_relative "sumac/id_allocator.rb"
-require_relative "sumac/reference.rb"
-require_relative "sumac/local_reference.rb"
-require_relative "sumac/local_references.rb"
-require_relative "sumac/message.rb"
-require_relative "sumac/message/exchange.rb"
-require_relative "sumac/message/object.rb"
-require_relative "sumac/message/exchange/id.rb"
-require_relative "sumac/message/exchange/base.rb"
-require_relative "sumac/message/exchange/call_request.rb"
-require_relative "sumac/message/exchange/call_response.rb"
-require_relative "sumac/message/exchange/notification.rb"
-require_relative "sumac/message/exchange/compatibility_notification.rb"
-require_relative "sumac/message/exchange/forget_notification.rb"
-require_relative "sumac/message/exchange/initialization_notification.rb"
-require_relative "sumac/message/exchange/shutdown_notification.rb"
-require_relative "sumac/message/object/base.rb"
-require_relative "sumac/message/object/array.rb"
-require_relative "sumac/message/object/boolean.rb"
-require_relative "sumac/message/object/exception.rb"
-require_relative "sumac/message/object/exposed.rb"
-require_relative "sumac/message/object/exposed_child.rb"
-require_relative "sumac/message/object/float.rb"
-require_relative "sumac/message/object/hash_table.rb"
-require_relative "sumac/message/object/integer.rb"
-require_relative "sumac/message/object/native_exception.rb"
-require_relative "sumac/message/object/null.rb"
-require_relative "sumac/message/object/string.rb"
-require_relative "sumac/message_error.rb"
-require_relative "sumac/messenger.rb"
-require_relative "sumac/no_method_error.rb"
-require_relative "sumac/native_error.rb"
-require_relative "sumac/remote_entry.rb"
-require_relative "sumac/remote_object.rb"
-require_relative "sumac/remote_object_child.rb"
-require_relative "sumac/remote_reference.rb"
-require_relative "sumac/remote_references.rb"
-require_relative "sumac/scheduler.rb"
-require_relative "sumac/shutdown.rb"
-require_relative "sumac/stale_object_error.rb"
-require_relative "sumac/unexposable_object_error.rb"
-require_relative "sumac/worker_pool.rb"
+require 'sumac/calls/local_call.rb'
+require 'sumac/calls/local_calls.rb'
+require 'sumac/calls/remote_call.rb'
+require 'sumac/calls/remote_calls.rb'
+require 'sumac/calls.rb'
+require 'sumac/closer.rb'
+require 'sumac/connection/scheduler.rb'
+require 'sumac/connection.rb'
+require 'sumac/directive_queue.rb'
+require 'sumac/error.rb'
+require 'sumac/exposed_object.rb'
+require 'sumac/argument_error.rb'
+require 'sumac/closed_messenger_error.rb'
+require 'sumac/closed_object_request_broker_error.rb'
+require 'sumac/handshake.rb'
+require 'sumac/id.rb'
+require 'sumac/id_allocator.rb'
+require 'sumac/local_object/expose_preferences.rb'
+require 'sumac/local_object/instance_methods.rb'
+require 'sumac/local_object/singleton_methods.rb'
+require 'sumac/local_object.rb'
+#require 'sumac/local_object_child.rb'
+require 'sumac/messages/base.rb'
+require 'sumac/messages/component/array.rb'
+require 'sumac/messages/component/boolean.rb'
+require 'sumac/messages/component/exception.rb'
+require 'sumac/messages/component/exposed.rb'
+#require 'sumac/messages/component/exposed_child.rb'
+require 'sumac/messages/component/float.rb'
+require 'sumac/messages/component/integer.rb'
+require 'sumac/messages/component/internal_exception.rb'
+require 'sumac/messages/component/map.rb'
+require 'sumac/messages/component/null.rb'
+require 'sumac/messages/component/string.rb'
+require 'sumac/messages/component.rb'
+require 'sumac/messages/message.rb'
+require 'sumac/messages/call_request.rb'
+require 'sumac/messages/call_response.rb'
+require 'sumac/messages/compatibility.rb'
+require 'sumac/messages/forget.rb'
+require 'sumac/messages/initialization.rb'
+require 'sumac/messages/shutdown.rb'
+require 'sumac/messages.rb'
+require 'sumac/messenger.rb'
+require 'sumac/object_request_broker.rb'
+require 'sumac/objects/local_references.rb'
+require 'sumac/objects/reference/scheduler.rb'
+require 'sumac/objects/reference.rb'
+require 'sumac/objects/local_reference.rb'
+require 'sumac/objects/remote_reference.rb'
+require 'sumac/objects/remote_references.rb'
+require 'sumac/objects.rb'
+require 'sumac/protocol_error.rb'
+require 'sumac/remote_entry.rb'
+require 'sumac/remote_error.rb'
+require 'sumac/remote_object.rb'
+#require 'sumac/remote_object_child.rb'
+require 'sumac/shutdown.rb'
+require 'sumac/stale_object_error.rb'
+require 'sumac/unexposed_method_error.rb'
+require 'sumac/unexposed_object_error.rb'
 
 
-class Sumac
-  include Emittable
-  
-  def initialize(duck_types: {}, entry: nil, messenger: , workers: 1)
-    @connection = Connection.new(self, duck_types: duck_types, entry: entry, messenger: messenger, workers: workers)
-    @connection.scheduler.run
-  end
-  
-  def close
-    @connection.closer.close
-    nil
-  end
-  
-  def entry
-    @connection.remote_entry.get
-  end
-  
-  def join
-    @connection.closer.join
-  end
-  
-  #def forget(exposed_object)
-  # raise unless exposed_object.is_a?(ExposedObject)
-  # @connection
-  
-  #def kill
-  #end
-  
+module Sumac
+
+  # Maximum depth of an object passed as an argument or returned.
+  MAX_OBJECT_NESTING_DEPTH = 100
+
+  # +include+ or +extend+ to expose objects.
+  # @note for a more intuitive naming convention {LocalObject} will be referenced
+  #   by the code base, however {Expose} should be used by the application.
+  # A {LocalObject} is an object that can be shared with the remote endpoint.
+  # @see LocalObject for examples of how to use it by the application
+  Expose = LocalObject
+
 end
